@@ -1,0 +1,28 @@
+services:
+  lidarr-fork:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lidarr-fork
+    hostname: music-fork.gaytulsa.org
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - /Docker/LidarrFork:/config
+      - /PlexMedia:/data
+      - /PlexMedia2:/data2
+    networks:
+      traefik:
+        ipv4_address: 172.30.0.19
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lidarr-fork.rule=Host(`music-fork.gaytulsa.org`)"
+      - "traefik.http.services.lidarr-fork.loadbalancer.server.port=8686"
+      - "traefik.http.routers.lidarr-fork.service=lidarr-fork"
+
+networks:
+  traefik:
+    external: true
