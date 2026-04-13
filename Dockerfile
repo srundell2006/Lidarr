@@ -1,5 +1,5 @@
 # Stage 1: Build frontend
-FROM node:18-alpine AS ui-build
+FROM node:20-alpine AS ui-build
 WORKDIR /src
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
