@@ -10,6 +10,7 @@ RUN yarn build
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS backend-build
 WORKDIR /src
 COPY global.json .editorconfig ./
+COPY Logo/ ./Logo/
 COPY src/ ./src/
 RUN dotnet publish src/NzbDrone.Console/Lidarr.Console.csproj \
     --configuration Release \
