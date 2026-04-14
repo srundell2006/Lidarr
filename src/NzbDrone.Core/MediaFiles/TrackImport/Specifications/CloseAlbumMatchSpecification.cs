@@ -9,9 +9,9 @@ namespace NzbDrone.Core.MediaFiles.TrackImport.Specifications
 {
     public class CloseAlbumMatchSpecification : IImportDecisionEngineSpecification<LocalAlbumRelease>
     {
-        private const double _albumThreshold = 0.40;
+        private const double _albumThreshold = 0.99;
 
-        private const double _trackThreshold = 0.60;
+        private const double _trackThreshold = 0.99;
         private readonly Logger _logger;
 
         public CloseAlbumMatchSpecification(Logger logger)
