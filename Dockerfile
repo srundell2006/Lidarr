@@ -18,7 +18,7 @@ RUN dotnet publish src/NzbDrone.Console/Lidarr.Console.csproj \
         --runtime linux-x64 \
         --self-contained false \
         --output /app \
-        "-p:NoWarn=NU1902;CS1591" \
+        -p:NoWarn=NU1902%3BCS1591 \
         -p:TreatWarningsAsErrors=false && \
     dotnet publish src/NzbDrone.Mono/Lidarr.Mono.csproj \
         --configuration Release \
@@ -26,7 +26,7 @@ RUN dotnet publish src/NzbDrone.Console/Lidarr.Console.csproj \
         --runtime linux-x64 \
         --self-contained false \
         --output /app \
-        "-p:NoWarn=NU1902;CS1591" \
+        -p:NoWarn=NU1902%3BCS1591 \
         -p:TreatWarningsAsErrors=false
 
 # Stage 3: Runtime
