@@ -13,17 +13,17 @@ COPY global.json .editorconfig ./
 COPY Logo/ ./Logo/
 COPY src/ ./src/
 RUN dotnet publish src/NzbDrone.Console/Lidarr.Console.csproj \
-    --configuration Release \
-    --framework net8.0 \
-    --runtime linux-x64 \
-    --self-contained false \
-    --output /app && \
+        --configuration Release \
+        --framework net8.0 \
+        --runtime linux-x64 \
+        --self-contained false \
+        --output /app && \
     dotnet publish src/NzbDrone.Mono/Lidarr.Mono.csproj \
-    --configuration Release \
-    --framework net8.0 \
-    --runtime linux-x64 \
-    --self-contained false \
-    --output /app
+        --configuration Release \
+        --framework net8.0 \
+        --runtime linux-x64 \
+        --self-contained false \
+        --output /app
 
 # Stage 3: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
