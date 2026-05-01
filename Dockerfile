@@ -17,13 +17,15 @@ RUN dotnet publish src/NzbDrone.Console/Lidarr.Console.csproj \
         --framework net8.0 \
         --runtime linux-x64 \
         --self-contained false \
-        --output /app && \
+        --output /app \
+        -p:NoWarn=NU1902 && \
     dotnet publish src/NzbDrone.Mono/Lidarr.Mono.csproj \
         --configuration Release \
         --framework net8.0 \
         --runtime linux-x64 \
         --self-contained false \
-        --output /app
+        --output /app \
+        -p:NoWarn=NU1902
 
 # Stage 3: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
