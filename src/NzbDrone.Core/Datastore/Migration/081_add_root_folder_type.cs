@@ -9,7 +9,9 @@ namespace NzbDrone.Core.Datastore.Migration
         protected override void MainDbUpgrade()
         {
             Alter.Table("RootFolders")
-                 .AddColumn("FolderType").AsInt32().WithDefaultValue(0);
+                 .AddColumn("FolderType").AsInt32().Nullable();
+
+            Execute.Sql("UPDATE RootFolders SET FolderType = 0 WHERE FolderType IS NULL");
         }
     }
 }
