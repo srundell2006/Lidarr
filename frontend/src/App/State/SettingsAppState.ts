@@ -55,6 +55,8 @@ export interface RootFolderAppState
     AppSectionDeleteState,
     AppSectionSaveState {}
 
+export type ImportFolderAppState = RootFolderAppState;
+
 export type IndexerFlagSettingsAppState = AppSectionState<IndexerFlag>;
 export type UiSettingsAppState = AppSectionItemState<UiSettings>;
 
@@ -70,6 +72,7 @@ interface SettingsAppState {
   notifications: NotificationAppState;
   qualityProfiles: QualityProfilesAppState;
   rootFolders: RootFolderAppState;
+  importFolders: ImportFolderAppState;
   ui: UiSettingsAppState;
 }
 

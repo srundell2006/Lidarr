@@ -13,6 +13,7 @@ import { inputTypes, kinds, sizes } from 'Helpers/Props';
 import SettingsToolbarConnector from 'Settings/SettingsToolbarConnector';
 import translate from 'Utilities/String/translate';
 import NamingConnector from './Naming/NamingConnector';
+import ImportFoldersConnector from './ImportFolder/ImportFoldersConnector';
 import RootFoldersConnector from './RootFolder/RootFoldersConnector';
 
 const rescanAfterRefreshOptions = [
@@ -121,6 +122,7 @@ class MediaManagement extends Component {
 
         <PageContentBody>
           <RootFoldersConnector />
+          <ImportFoldersConnector />
           <NamingConnector />
 
           {

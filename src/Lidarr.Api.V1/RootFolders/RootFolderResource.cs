@@ -11,6 +11,7 @@ namespace Lidarr.Api.V1.RootFolders
     {
         public string Name { get; set; }
         public string Path { get; set; }
+        public RootFolderType FolderType { get; set; }
         public int DefaultMetadataProfileId { get; set; }
         public int DefaultQualityProfileId { get; set; }
         public MonitorTypes DefaultMonitorOption { get; set; }
@@ -38,6 +39,8 @@ namespace Lidarr.Api.V1.RootFolders
                 Name = model.Name,
                 Path = model.Path.GetCleanPath(),
 
+                FolderType = model.FolderType,
+
                 DefaultMetadataProfileId = model.DefaultMetadataProfileId,
                 DefaultQualityProfileId = model.DefaultQualityProfileId,
                 DefaultMonitorOption = model.DefaultMonitorOption,
@@ -62,6 +65,8 @@ namespace Lidarr.Api.V1.RootFolders
                 Id = resource.Id,
                 Name = resource.Name,
                 Path = resource.Path,
+
+                FolderType = resource.FolderType,
 
                 DefaultMetadataProfileId = resource.DefaultMetadataProfileId,
                 DefaultQualityProfileId = resource.DefaultQualityProfileId,

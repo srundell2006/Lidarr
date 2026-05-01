@@ -18,6 +18,8 @@ namespace NzbDrone.Core.RootFolders
     {
         List<RootFolder> All();
         List<RootFolder> AllWithSpaceStats();
+        List<RootFolder> AllRootFolders();
+        List<RootFolder> AllImportFolders();
         RootFolder Add(RootFolder rootFolder);
         RootFolder Update(RootFolder rootFolder);
         void Remove(int id);
@@ -50,6 +52,11 @@ namespace NzbDrone.Core.RootFolders
             _cache = cacheManager.GetCache<string>(GetType());
         }
 
+        public List<RootFolder> AllRootFolders()
+            => All().Where(f => f.FolderType == RootFolderType.RootFolder).ToList();
+
+        public List<RootFolder> AllImportFolders()
+            => All().Where(f => f.FolderType == RootFolderType.ImportFolder).ToList();
         public List<RootFolder> All()
         {
             var rootFolders = _rootFolderRepository.All().ToList();

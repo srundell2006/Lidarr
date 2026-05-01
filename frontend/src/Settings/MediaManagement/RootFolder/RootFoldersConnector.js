@@ -15,7 +15,8 @@ function createMapStateToProps() {
       return {
         qualityProfiles: quality.items,
         metadataProfiles: metadata.items,
-        ...rootFolders
+        ...rootFolders,
+        items: rootFolders.items.filter((f) => f.folderType !== 1)
       };
     }
   );

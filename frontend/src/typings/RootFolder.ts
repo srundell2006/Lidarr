@@ -4,6 +4,7 @@ interface RootFolder extends ModelBase {
   id: number;
   name: string;
   path: string;
+  folderType: number;
   accessible: boolean;
   freeSpace?: number;
   unmappedFolders: object[];

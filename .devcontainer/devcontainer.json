@@ -3,6 +3,10 @@
 {
   "name": "Lidarr",
   "image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0",
+  "runArgs": [
+    "--cap-add=NET_ADMIN",
+    "--cap-add=NET_RAW"
+  ],
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
       "nodeGypDependencies": true,

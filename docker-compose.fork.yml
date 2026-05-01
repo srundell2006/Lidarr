@@ -10,12 +10,14 @@ services:
       - PGID=1000
       - TZ=America/Chicago
     volumes:
-      - /Docker/LidarrFork:/config
-      - /PlexMedia:/data
-      - /PlexMedia2:/data2
-    networks:
-      traefik:
-        ipv4_address: 172.30.0.19
+      - LidarrConfig:/config
+      - PlexMedia:/data
+      - PlexMedia2:/data2
+    ports:
+      - "8687:80"
+#    networks:
+#      traefik:
+#        ipv4_address: 172.30.0.19
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
@@ -25,4 +27,12 @@ services:
 
 networks:
   traefik:
+    external: true
+
+volumes:
+  PlexMedia:
+    external: true
+  PlexMedia2:
+    external: true
+  LidarrConfig:
     external: true

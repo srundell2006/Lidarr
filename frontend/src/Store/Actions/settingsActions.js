@@ -26,6 +26,7 @@ import qualityDefinitions from './Settings/qualityDefinitions';
 import qualityProfiles from './Settings/qualityProfiles';
 import releaseProfiles from './Settings/releaseProfiles';
 import remotePathMappings from './Settings/remotePathMappings';
+import importFolders from './Settings/importFolders';
 import rootFolders from './Settings/rootFolders';
 import ui from './Settings/ui';
 
@@ -54,6 +55,7 @@ export * from './Settings/qualityDefinitions';
 export * from './Settings/qualityProfiles';
 export * from './Settings/releaseProfiles';
 export * from './Settings/remotePathMappings';
+export * from './Settings/importFolders';
 export * from './Settings/rootFolders';
 export * from './Settings/ui';
 
@@ -92,6 +94,7 @@ export const defaultState = {
   qualityProfiles: qualityProfiles.defaultState,
   releaseProfiles: releaseProfiles.defaultState,
   remotePathMappings: remotePathMappings.defaultState,
+  importFolders: importFolders.defaultState,
   rootFolders: rootFolders.defaultState,
   ui: ui.defaultState
 };
@@ -139,6 +142,7 @@ export const actionHandlers = handleThunks({
   ...qualityProfiles.actionHandlers,
   ...releaseProfiles.actionHandlers,
   ...remotePathMappings.actionHandlers,
+  ...importFolders.actionHandlers,
   ...rootFolders.actionHandlers,
   ...ui.actionHandlers
 });
@@ -177,6 +181,7 @@ export const reducers = createHandleActions({
   ...qualityProfiles.reducers,
   ...releaseProfiles.reducers,
   ...remotePathMappings.reducers,
+  ...importFolders.reducers,
   ...rootFolders.reducers,
   ...ui.reducers
 
