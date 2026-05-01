@@ -1,0 +1,104 @@
+.tableContainer {
+  overflow-x: auto;
+}
+
+.importFolderPath {
+  margin-bottom: 15px;
+  padding: 10px 12px;
+  background-color: var(--inputBackgroundColor);
+  border: 1px solid var(--inputBorderColor);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--defaultColor);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--tableBorderColor);
+  background-color: var(--tableHeaderBackgroundColor);
+  color: var(--defaultColor);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--tableBorderColor);
+  vertical-align: middle;
+  color: var(--defaultColor);
+}
+
+.table tbody tr:hover {
+  background-color: var(--tableRowHoverBackgroundColor);
+}
+
+.selectCell {
+  width: 36px;
+  text-align: center !important;
+}
+
+.pathCell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.artistCell {
+  width: 180px;
+}
+
+.albumCell {
+  width: 200px;
+}
+
+.tracksCell {
+  width: 80px;
+  text-align: center !important;
+}
+
+.qualityCell {
+  width: 100px;
+}
+
+.statusCell {
+  width: 200px;
+}
+
+.validRow {
+  background-color: transparent;
+}
+
+.rejectedRow {
+  opacity: 0.6;
+}
+
+.noMatch {
+  color: var(--disabledColor);
+  font-style: italic;
+}
+
+.rejections {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rejection {
+  font-size: 12px;
+  color: var(--dangerColor);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.importAlert {
+  margin-top: 15px;
+}

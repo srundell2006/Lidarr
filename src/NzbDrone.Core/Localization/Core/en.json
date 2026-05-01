@@ -800,6 +800,7 @@
   "MusicBrainzReleaseID": "MusicBrainz Release ID",
   "MusicBrainzTrackID": "MusicBrainz Track ID",
   "MusicbrainzId": "Musicbrainz Id",
+  "MusicImport": "Music Import",
   "MustContain": "Must Contain",
   "MustNotContain": "Must Not Contain",
   "NETCore": ".NET",

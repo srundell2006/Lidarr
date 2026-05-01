@@ -32,6 +32,7 @@ import Status from 'System/Status/Status';
 import Tasks from 'System/Tasks/Tasks';
 import Updates from 'System/Updates/Updates';
 import UnmappedFilesTableConnector from 'UnmappedFiles/UnmappedFilesTableConnector';
+import MusicImportPageConnector from 'MusicImport/MusicImportPageConnector';
 import getPathWithUrlBase from 'Utilities/getPathWithUrlBase';
 import CutoffUnmetConnector from 'Wanted/CutoffUnmet/CutoffUnmetConnector';
 import MissingConnector from 'Wanted/Missing/MissingConnector';
@@ -104,6 +105,11 @@ function AppRoutes(props) {
       <Route
         path="/unmapped"
         component={UnmappedFilesTableConnector}
+      />
+
+      <Route
+        path="/musicimport"
+        component={MusicImportPageConnector}
       />
 
       <Route

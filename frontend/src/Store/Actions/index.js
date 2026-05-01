@@ -12,6 +12,7 @@ import * as commands from './commandActions';
 import * as customFilters from './customFilterActions';
 import * as history from './historyActions';
 import * as interactiveImportActions from './interactiveImportActions';
+import * as musicImport from './musicImportActions';
 import * as oAuth from './oAuthActions';
 import * as organizePreview from './organizePreviewActions';
 import * as parse from './parseActions';
@@ -44,6 +45,7 @@ export default [
   trackFiles,
   history,
   interactiveImportActions,
+  musicImport,
   oAuth,
   organizePreview,
   retagPreview,

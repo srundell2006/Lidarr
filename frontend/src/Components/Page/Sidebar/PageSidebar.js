@@ -32,6 +32,10 @@ const links = [
       {
         title: () => translate('UnmappedFiles'),
         to: '/unmapped'
+      },
+      {
+        title: () => translate('MusicImport'),
+        to: '/musicimport'
       }
     ]
   },
