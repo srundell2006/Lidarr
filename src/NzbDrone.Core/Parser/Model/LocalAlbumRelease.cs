@@ -36,6 +36,13 @@ namespace NzbDrone.Core.Parser.Model
         public List<LocalTrack> ExistingTracks { get; set; }
         public bool NewDownload { get; set; }
 
+        /// <summary>
+        /// Set by <see cref="NzbDrone.Core.MediaFiles.TrackImport.ImportDecisionMakerConfig.AllowPartialAlbum"/>.
+        /// When true, album-level specifications that require all tracks to be
+        /// present are bypassed so that a subset of an album can be imported.
+        /// </summary>
+        public bool AllowPartialAlbum { get; set; }
+
         public void PopulateMatch()
         {
             if (AlbumRelease != null)

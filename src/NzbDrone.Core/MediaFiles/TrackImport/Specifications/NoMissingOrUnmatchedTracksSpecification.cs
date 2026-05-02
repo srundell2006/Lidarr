@@ -16,6 +16,14 @@ namespace NzbDrone.Core.MediaFiles.TrackImport.Specifications
 
         public Decision IsSatisfiedBy(LocalAlbumRelease item, DownloadClientItem downloadClientItem)
         {
+            // Manual-import paths set AllowPartialAlbum so the user can import a
+            // subset of an album's tracks (e.g. a single, or a partial rip) without
+            // the whole decision being blocked because other tracks are absent.
+            if (item.AllowPartialAlbum)
+            {
+                return Decision.Accept();
+            }
+
             if (item.NewDownload && item.TrackMapping.LocalExtra.Count > 0)
             {
                 _logger.Debug("This release has track files that have not been matched. Skipping {0}", item);

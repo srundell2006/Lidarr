@@ -42,6 +42,15 @@ namespace NzbDrone.Core.MediaFiles.TrackImport
         public bool SingleRelease { get; set; }
         public bool IncludeExisting { get; set; }
         public bool AddNewArtists { get; set; }
+
+        /// <summary>
+        /// When true the album-level specifications that require every track in
+        /// a release to be present (NoMissingOrUnmatchedTracksSpecification) are
+        /// skipped.  Set this for all manual-import code paths so that the user
+        /// can import a subset of an album's tracks without the whole decision
+        /// being rejected because the remaining tracks are absent.
+        /// </summary>
+        public bool AllowPartialAlbum { get; set; }
     }
 
     public class ImportDecisionMaker : IMakeImportDecision
@@ -181,6 +190,7 @@ namespace NzbDrone.Core.MediaFiles.TrackImport
                     // in case it's a new artist
                     EnsureData(release);
                     release.NewDownload = config.NewDownload;
+                    release.AllowPartialAlbum = config.AllowPartialAlbum;
 
                     albumDecisions.Add(GetDecision(release, itemInfo.DownloadClientItem));
                 }

@@ -129,7 +129,8 @@ namespace NzbDrone.Core.MediaFiles.TrackImport.Manual
                     NewDownload = true,
                     SingleRelease = false,
                     IncludeExisting = !replaceExistingFiles,
-                    AddNewArtists = false
+                    AddNewArtists = false,
+                    AllowPartialAlbum = true
                 };
 
                 var decisions = _importDecisionMaker.GetImportDecisions(files, null, null, config);
@@ -212,7 +213,12 @@ namespace NzbDrone.Core.MediaFiles.TrackImport.Manual
                 // Music Import page.  EnsureArtistAdded / EnsureAlbumAdded in
                 // ImportApprovedTracks will add them to the library when the user
                 // triggers the import.
-                AddNewArtists = true
+                AddNewArtists = true,
+
+                // Allow partial albums: the user may deliberately import a single or
+                // only some tracks from an album, so don't reject the entire decision
+                // just because other tracks from that release are not present.
+                AllowPartialAlbum = true
             };
 
             var decisions = _importDecisionMaker.GetImportDecisions(artistFiles, idOverrides, itemInfo, config);
@@ -275,7 +281,8 @@ namespace NzbDrone.Core.MediaFiles.TrackImport.Manual
                     NewDownload = true,
                     SingleRelease = true,
                     IncludeExisting = !replaceExistingFiles,
-                    AddNewArtists = false
+                    AddNewArtists = false,
+                    AllowPartialAlbum = true
                 };
                 var decisions = _importDecisionMaker.GetImportDecisions(files, idOverride, null, config);
 
