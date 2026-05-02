@@ -273,7 +273,121 @@ namespace NzbDrone.Core.MediaFiles
             _logger.Trace("{0} files were found in {1}", filesOnDisk.Count, path);
             _logger.Debug("{0} audio files were found in {1}", mediaFileList.Count, path);
 
-            return mediaFileList.ToArray();
+            // Rename any path components that contain characters illegal on Windows/NTFS.
+            // This runs in-place on disk so Lidarr stores clean paths from the start.
+            var sanitized = new List<IFileInfo>(mediaFileList.Count);
+            foreach (var file in mediaFileList)
+            {
+                var cleanPath = SanitizePathComponents(path, file.FullName);
+                sanitized.Add(cleanPath != file.FullName
+                    ? _diskProvider.GetFileInfo(cleanPath)
+                    : file);
+            }
+
+            return sanitized.ToArray();
+        }
+
+        // Characters that are illegal in filenames on Windows/NTFS and cause
+        // interoperability problems.  Slash (/) and backslash (\) are omitted
+        // because they are path separators — the OS will never include them in
+        // a single filename component returned by readdir.
+        private static readonly char[] IllegalPathChars = { ':', '*', '?', '"', '<', '>', '|' };
+
+        /// <summary>
+        /// Walks each path component between <paramref name="basePath"/> and
+        /// <paramref name="fullPath"/>, renames any component that contains
+        /// illegal characters, and returns the resulting clean path.
+        /// </summary>
+        private string SanitizePathComponents(string basePath, string fullPath)
+        {
+            // Fast-path: nothing to do if the relative portion is already clean
+            var relative = fullPath.Substring(basePath.TrimEnd('/').Length).TrimStart('/');
+            if (relative.IndexOfAny(IllegalPathChars) < 0)
+            {
+                return fullPath;
+            }
+
+            var components = relative.Split('/');
+            var currentBase = basePath.TrimEnd('/');
+
+            foreach (var component in components)
+            {
+                var clean = SanitizeFileName(component);
+                var originalFull = currentBase + "/" + component;
+                var cleanFull = currentBase + "/" + clean;
+
+                if (clean != component)
+                {
+                    // Skip if the sanitized target already exists (renamed by a previous
+                    // file's iteration over the same directory).
+                    var targetExists = _diskProvider.FolderExists(cleanFull) ||
+                                       _diskProvider.FileExists(cleanFull);
+
+                    if (!targetExists)
+                    {
+                        try
+                        {
+                            if (_diskProvider.FolderExists(originalFull))
+                            {
+                                _diskProvider.MoveFolder(originalFull, cleanFull);
+                                _logger.Info(
+                                    "Renamed directory: '{0}' → '{1}' (illegal characters removed)",
+                                    component,
+                                    clean);
+                            }
+                            else if (_diskProvider.FileExists(originalFull))
+                            {
+                                _diskProvider.MoveFile(originalFull, cleanFull);
+                                _logger.Info(
+                                    "Renamed file: '{0}' → '{1}' (illegal characters removed)",
+                                    component,
+                                    clean);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Warn(ex, "Failed to rename '{0}' to '{1}' — keeping original name", originalFull, cleanFull);
+                            cleanFull = originalFull;
+                        }
+                    }
+                    else
+                    {
+                        _logger.Debug("Sanitized target already exists, skipping rename: '{0}'", cleanFull);
+                    }
+                }
+
+                currentBase = cleanFull;
+            }
+
+            return currentBase;
+        }
+
+        /// <summary>
+        /// Returns a copy of <paramref name="name"/> with characters that are
+        /// illegal on Windows/NTFS replaced or removed.
+        /// </summary>
+        private static string SanitizeFileName(string name)
+        {
+            if (name.IndexOfAny(IllegalPathChars) < 0)
+            {
+                return name;
+            }
+
+            // Colon: smart replacement mirrors FileNameBuilder behaviour.
+            // ": " (colon-space) → " - " for readability (e.g. "Artist: Album" → "Artist - Album")
+            // remaining ":" → "-"
+            var result = name
+                .Replace(": ", " - ")
+                .Replace(":", "-")
+                .Replace("*", "-")
+                .Replace("?", string.Empty)
+                .Replace("\"", string.Empty)
+                .Replace("<", string.Empty)
+                .Replace(">", string.Empty)
+                .Replace("|", string.Empty);
+
+            // Strip trailing dots/spaces — these are also illegal on Windows
+            return result.TrimEnd(' ', '.');
         }
 
         public string[] GetNonAudioFiles(string path, bool allDirectories = true)
