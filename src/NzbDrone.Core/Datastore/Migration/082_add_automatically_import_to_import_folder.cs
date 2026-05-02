@@ -9,9 +9,7 @@ namespace NzbDrone.Core.Datastore.Migration
         protected override void MainDbUpgrade()
         {
             Alter.Table("RootFolders")
-                 .AddColumn("AutomaticallyImport").AsBoolean().Nullable();
-
-            Execute.Sql("UPDATE RootFolders SET AutomaticallyImport = 0 WHERE AutomaticallyImport IS NULL");
+                 .AddColumn("AutomaticallyImport").AsBoolean().NotNullable().WithDefaultValue(false);
         }
     }
 }
