@@ -220,16 +220,23 @@ class MusicImportPage extends Component {
   renderStatus(item, isSaving) {
     const { rejections, hasExistingFiles } = item;
 
+    // No audio tags and no artist found: the file couldn't be identified at all.
+    // Show a more helpful message than a generic "No artist match".
     if (!item.artist) {
-      return <span className={styles.noMatch}>No artist match</span>;
+      const hasTags = item.audioTags &&
+        (item.audioTags.artistTitle || item.audioTags.albumTitle || item.audioTags.title);
+      if (!hasTags) {
+        return <span className={styles.noMatch} title="File has no embedded tags and no artist could be identified from the filename">No tags — unable to identify</span>;
+      }
+      return <span className={styles.noMatch} title={`Tags found but no matching artist in your library: ${item.audioTags.artistTitle || 'unknown artist'}`}>No artist match</span>;
     }
 
     if (!item.album) {
-      return <span className={styles.noMatch}>No album match</span>;
+      return <span className={styles.noMatch} title={`Artist matched (${item.artist.artistName}) but no album could be identified`}>No album match</span>;
     }
 
     if (!item.tracks || item.tracks.length === 0) {
-      return <span className={styles.noMatch}>No track match</span>;
+      return <span className={styles.noMatch} title={`Matched ${item.artist.artistName} / ${item.album.title} but no individual track could be matched`}>No track match</span>;
     }
 
     // Show "Already in library" before rejections: a quality-based rejection
@@ -257,14 +264,25 @@ class MusicImportPage extends Component {
       );
     }
 
+    // Rejections: the backend sends { reason, type } where type 0 = Permanent,
+    // type 1 = Temporary.  Permanent rejections (wrong quality, wrong format, etc.)
+    // are shown in red; temporary ones (e.g. cutoff already met) in amber.
     if (rejections && rejections.length > 0) {
       return (
         <span className={styles.rejections}>
-          {rejections.map((r, i) => (
-            <span key={i} className={styles.rejection}>
-              {r.message}
-            </span>
-          ))}
+          {rejections.map((r, i) => {
+            // RejectionType: 0 = Permanent, 1 = Temporary
+            const isPermanent = r.type === 0 || r.type === 'Permanent';
+            return (
+              <span
+                key={i}
+                className={isPermanent ? styles.rejection : styles.rejectionTemporary}
+                title={isPermanent ? 'Permanent — this file cannot be imported' : 'Temporary — may become importable later'}
+              >
+                {r.reason}
+              </span>
+            );
+          })}
         </span>
       );
     }
