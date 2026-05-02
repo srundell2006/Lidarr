@@ -15,16 +15,22 @@ import selectAll from 'Utilities/Table/selectAll';
 import toggleSelected from 'Utilities/Table/toggleSelected';
 import styles from './MusicImportPage.css';
 
-// Returns true when the item was rejected solely because the existing library
-// file is at an equal or better quality — these files should be deletable from
-// the import folder just like files flagged with hasExistingFiles.
-// Matches the two rejection messages produced by UpgradeSpecification and
-// AlbumUpgradeSpecification respectively.
+// Returns true when the item was rejected because the library already has
+// equal or better content — these files should be deletable from the import
+// folder just like files flagged with hasExistingFiles.
+//
+// Covers rejection messages from:
+//   UpgradeSpecification        → "Not an upgrade for existing track file(s)…"
+//   AlbumUpgradeSpecification   → "Not an upgrade for existing album file(s)"
+//   MoreTracksSpecification     → "Has fewer tracks than existing release"
+//   ImportDecisionMaker         → "Multiple versions of an album not supported"
 function isNotUpgradeItem(item) {
   return !!(item.rejections && item.rejections.some(
     (r) => r.reason && (
       r.reason === 'Not an upgrade for existing album file(s)' ||
-      r.reason.startsWith('Not an upgrade for existing track file(s)')
+      r.reason.startsWith('Not an upgrade for existing track file(s)') ||
+      r.reason === 'Has fewer tracks than existing release' ||
+      r.reason === 'Multiple versions of an album not supported'
     )
   ));
 }
