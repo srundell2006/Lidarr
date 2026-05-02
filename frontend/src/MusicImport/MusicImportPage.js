@@ -15,6 +15,20 @@ import selectAll from 'Utilities/Table/selectAll';
 import toggleSelected from 'Utilities/Table/toggleSelected';
 import styles from './MusicImportPage.css';
 
+// Returns true when the item was rejected solely because the existing library
+// file is at an equal or better quality — these files should be deletable from
+// the import folder just like files flagged with hasExistingFiles.
+// Matches the two rejection messages produced by UpgradeSpecification and
+// AlbumUpgradeSpecification respectively.
+function isNotUpgradeItem(item) {
+  return !!(item.rejections && item.rejections.some(
+    (r) => r.reason && (
+      r.reason === 'Not an upgrade for existing album file(s)' ||
+      r.reason.startsWith('Not an upgrade for existing track file(s)')
+    )
+  ));
+}
+
 class MusicImportPage extends Component {
 
   constructor(props, context) {
@@ -71,15 +85,16 @@ class MusicImportPage extends Component {
     });
   };
 
-  // IDs of selected items whose source file already exists in the library.
-  // These can be cleaned up from the import folder without a full import.
+  // IDs of selected items that can be deleted from the import folder without a
+  // full import: either the track is already in the library (hasExistingFiles)
+  // or the existing library file is at an equal/better quality (not an upgrade).
   getDeletableSelectedIds = () => {
     const { items } = this.props;
 
     return this.getSelectedIds().filter((id) => {
       const item = items.find((i) => i.id === id);
 
-      return item && item.hasExistingFiles;
+      return item && (item.hasExistingFiles || isNotUpgradeItem(item));
     });
   };
 
@@ -267,22 +282,37 @@ class MusicImportPage extends Component {
     // Rejections: the backend sends { reason, type } where type 0 = Permanent,
     // type 1 = Temporary.  Permanent rejections (wrong quality, wrong format, etc.)
     // are shown in red; temporary ones (e.g. cutoff already met) in amber.
+    // "Not an upgrade" rejections additionally get a delete button so the user
+    // can clean up the lower-quality import copy directly from this row.
     if (rejections && rejections.length > 0) {
+      const notUpgrade = isNotUpgradeItem(item);
       return (
-        <span className={styles.rejections}>
-          {rejections.map((r, i) => {
-            // RejectionType: 0 = Permanent, 1 = Temporary
-            const isPermanent = r.type === 0 || r.type === 'Permanent';
-            return (
-              <span
-                key={i}
-                className={isPermanent ? styles.rejection : styles.rejectionTemporary}
-                title={isPermanent ? 'Permanent — this file cannot be imported' : 'Temporary — may become importable later'}
-              >
-                {r.reason}
-              </span>
-            );
-          })}
+        <span className={notUpgrade ? styles.duplicateStatus : styles.rejections}>
+          <span className={styles.rejections}>
+            {rejections.map((r, i) => {
+              // RejectionType: 0 = Permanent, 1 = Temporary
+              const isPermanent = r.type === 0 || r.type === 'Permanent';
+              return (
+                <span
+                  key={i}
+                  className={isPermanent ? styles.rejection : styles.rejectionTemporary}
+                  title={isPermanent ? 'Permanent — this file cannot be imported' : 'Temporary — may become importable later'}
+                >
+                  {r.reason}
+                </span>
+              );
+            })}
+          </span>
+          {notUpgrade && (
+            <button
+              className={styles.deleteOneBtn}
+              disabled={isSaving}
+              title="Delete this lower-quality file from the import folder"
+              onClick={() => this.props.onDeleteDuplicatesPress([item.id])}
+            >
+              <Icon name={icons.DELETE} size={11} />
+            </button>
+          )}
         </span>
       );
     }
@@ -440,12 +470,13 @@ class MusicImportPage extends Component {
                         item.tracks.length > 0 &&
                         (!item.rejections || item.rejections.length === 0);
 
-                      // Duplicate items (already in library) are selectable even when
-                      // isImportable is false (e.g. quality not an upgrade) so the user
-                      // can select them for "Delete Duplicates".
-                      const isSelectable = isImportable || !!item.hasExistingFiles;
+                      // Items are selectable (and thus deletable) when they are
+                      // fully importable, already exist in the library, or are
+                      // "not an upgrade" over an existing library file.
+                      const isDeletable = !!item.hasExistingFiles || isNotUpgradeItem(item);
+                      const isSelectable = isImportable || isDeletable;
 
-                      const rowClass = item.hasExistingFiles
+                      const rowClass = isDeletable
                         ? styles.duplicateRow
                         : !isImportable
                           ? styles.invalidRow
