@@ -96,8 +96,19 @@ class MusicImportPage extends Component {
   onImportPress = () => {
     const importableIds = this.getImportableSelectedIds();
 
+    // Duplicate files that are selected but NOT importable (quality-blocked):
+    // trigger deletion alongside the import so the import folder is fully
+    // cleaned up in one action.
+    const duplicateOnlyIds = this.getDeletableSelectedIds().filter(
+      (id) => !importableIds.includes(id)
+    );
+
     if (importableIds.length > 0) {
       this.props.onImportPress(importableIds);
+    }
+
+    if (duplicateOnlyIds.length > 0) {
+      this.props.onDeleteDuplicatesPress(duplicateOnlyIds);
     }
   };
 
@@ -206,7 +217,7 @@ class MusicImportPage extends Component {
     );
   }
 
-  renderStatus(item) {
+  renderStatus(item, isSaving) {
     const { rejections, hasExistingFiles } = item;
 
     if (!item.artist) {
@@ -223,13 +234,25 @@ class MusicImportPage extends Component {
 
     // Show "Already in library" before rejections: a quality-based rejection
     // (e.g. "Not an upgrade") IS the duplicate situation and shouldn't hide it.
+    // Include a per-row trash button so the user can delete the import copy
+    // individually without selecting and using the bulk toolbar button.
     if (hasExistingFiles) {
       return (
-        <span
-          className={styles.duplicate}
-          title="Already in your library — select and click Delete Duplicates to remove the import copy, or Import to replace it if the quality is better."
-        >
-          Already in library
+        <span className={styles.duplicateStatus}>
+          <span
+            className={styles.duplicate}
+            title="Already in your library — delete the import copy, or Import to replace it if the quality is better."
+          >
+            Already in library
+          </span>
+          <button
+            className={styles.deleteOneBtn}
+            disabled={isSaving}
+            title="Delete this file from the import folder"
+            onClick={() => this.props.onDeleteDuplicatesPress([item.id])}
+          >
+            <Icon name={icons.DELETE} size={11} />
+          </button>
         </span>
       );
     }
@@ -451,7 +474,7 @@ class MusicImportPage extends Component {
                             {item.quality ? item.quality.quality.name : '—'}
                           </td>
                           <td className={styles.statusCell}>
-                            {this.renderStatus(item)}
+                            {this.renderStatus(item, isSaving)}
                           </td>
                         </tr>
                       );
