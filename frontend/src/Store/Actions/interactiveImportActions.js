@@ -187,7 +187,7 @@ export const actionHandlers = handleThunks({
         artistId: item.artist ? item.artist.id : undefined,
         albumId: item.album ? item.album.id : undefined,
         albumReleaseId: item.albumReleaseId ? item.albumReleaseId : undefined,
-        trackIds: (item.tracks || []).map((e) => e.id),
+        trackIds: (item.tracks || []).map((e) => e.id).filter((id) => id != null),
         quality: item.quality,
         releaseGroup: item.releaseGroup,
         indexerFlags: item.indexerFlags,

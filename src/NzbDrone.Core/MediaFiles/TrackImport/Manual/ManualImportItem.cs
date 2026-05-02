@@ -33,5 +33,14 @@ namespace NzbDrone.Core.MediaFiles.TrackImport.Manual
         public bool AdditionalFile { get; set; }
         public bool ReplaceExistingFiles { get; set; }
         public bool DisableReleaseSwitching { get; set; }
+
+        /// <summary>
+        /// True when at least one of the matched tracks already has a file in the
+        /// library (TrackFileId > 0).  Used by the Music Import page to flag
+        /// duplicates before the user triggers an import.  The import will either
+        /// replace the existing file (quality upgrade) or skip and delete the
+        /// source file (same / lower quality).
+        /// </summary>
+        public bool HasExistingFiles { get; set; }
     }
 }

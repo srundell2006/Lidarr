@@ -18,6 +18,8 @@ namespace Lidarr.Api.V1.RootFolders
         public NewItemMonitorTypes DefaultNewItemMonitorOption { get; set; }
         public HashSet<int> DefaultTags { get; set; }
 
+        public bool AutomaticallyImport { get; set; }
+
         public bool Accessible { get; set; }
         public long? FreeSpace { get; set; }
         public long? TotalSpace { get; set; }
@@ -47,6 +49,8 @@ namespace Lidarr.Api.V1.RootFolders
                 DefaultNewItemMonitorOption = model.DefaultNewItemMonitorOption,
                 DefaultTags = model.DefaultTags,
 
+                AutomaticallyImport = model.AutomaticallyImport,
+
                 Accessible = model.Accessible,
                 FreeSpace = model.FreeSpace,
                 TotalSpace = model.TotalSpace,
@@ -72,7 +76,8 @@ namespace Lidarr.Api.V1.RootFolders
                 DefaultQualityProfileId = resource.DefaultQualityProfileId,
                 DefaultMonitorOption = resource.DefaultMonitorOption,
                 DefaultNewItemMonitorOption = resource.DefaultNewItemMonitorOption,
-                DefaultTags = resource.DefaultTags ?? new HashSet<int>()
+                DefaultTags = resource.DefaultTags ?? new HashSet<int>(),
+                AutomaticallyImport = resource.AutomaticallyImport
             };
         }
 

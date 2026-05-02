@@ -53,6 +53,7 @@ export default {
       defaultMonitorOption: monitorOptions[0].key,
       defaultNewItemMonitorOption: monitorNewItemsOptions[0].key,
       defaultTags: [],
+      automaticallyImport: false,
       folderType: 1
     },
     isSaving: false,

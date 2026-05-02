@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO.Abstractions;
 using System.Linq;
 using NLog;
+using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Instrumentation.Extensions;
 using NzbDrone.Core.DecisionEngine;
@@ -105,14 +106,29 @@ namespace NzbDrone.Core.MediaFiles.TrackImport
             {
                 _logger.ProgressInfo($"Reading file {i++}/{files.Count}");
 
+                // Repair any non-UTF-8 mangled path ('?' substitution from Windows-1252
+                // filenames) so both the tag read and the subsequent file move use the
+                // real on-disk path.  GetFileInfos does this in bulk, but a file can
+                // slip through if its parent directories were also repaired mid-scan.
+                var filePath = file.FullName;
+                if (filePath.Contains('?'))
+                {
+                    var repairedPath = LinuxNativeFileHelper.RepairAndLocatePath(filePath);
+                    if (repairedPath != null)
+                    {
+                        _logger.Debug("Repaired mangled path before tag read: '{0}' → '{1}'", filePath, repairedPath);
+                        filePath = repairedPath;
+                    }
+                }
+
                 var localTrack = new LocalTrack
                 {
                     DownloadClientAlbumInfo = downloadClientItemInfo,
                     FolderAlbumInfo = folderInfo,
-                    Path = file.FullName,
+                    Path = filePath,
                     Size = file.Length,
                     Modified = file.LastWriteTimeUtc,
-                    FileTrackInfo = _audioTagService.ReadTags(file.FullName),
+                    FileTrackInfo = _audioTagService.ReadTags(filePath),
                     AdditionalFile = false
                 };
 

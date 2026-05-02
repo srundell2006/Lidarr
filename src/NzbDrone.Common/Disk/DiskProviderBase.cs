@@ -533,11 +533,67 @@ namespace NzbDrone.Common.Disk
 
             var di = _fileSystem.DirectoryInfo.FromDirectoryName(path);
 
-            return di.EnumerateFiles("*", new EnumerationOptions
+            var files = di.EnumerateFiles("*", new EnumerationOptions
             {
                 RecurseSubdirectories = recursive,
                 IgnoreInaccessible = true
             }).ToList();
+
+            // On Linux, .NET replaces non-UTF-8 filename bytes (e.g. Windows-1252
+            // curly quotes) with '?' when marshalling readdir output, making those
+            // files inaccessible through normal System.IO APIs.
+            //
+            // Two-pass repair strategy:
+            //
+            // Pass 1 — if any file has '?' inside its *directory* component, the
+            //   parent directories themselves have non-UTF-8 bytes.  RepairAndLocatePath
+            //   can only fix the leaf filename; it cannot opendir a parent whose bytes
+            //   are also mangled (the '?'-substituted path does not exist on disk).
+            //   In this case we call RepairFolderEncoding on the scanned root to rename
+            //   the whole subtree in one P/Invoke walk, then re-enumerate so all
+            //   IFileInfo objects reflect the corrected paths.
+            //
+            // Pass 2 — repair any files whose leaf name still contains '?' after pass 1
+            //   (e.g., files added after the tree repair, or trees where only the
+            //   leaf name is non-UTF-8 and pass 1 was skipped).  RepairAndLocatePath
+            //   opens the now-valid parent directory and renames just that entry.
+            if (OsInfo.IsNotWindows)
+            {
+                // Pass 1: detect mangled parent directories
+                var anyMangledDir = files.Any(f =>
+                    Path.GetDirectoryName(f.FullName)?.Contains('?') == true);
+
+                if (anyMangledDir)
+                {
+                    LinuxNativeFileHelper.RepairFolderEncoding(path);
+
+                    // Re-enumerate so the returned IFileInfo objects have the
+                    // corrected UTF-8 paths rather than the original '?'-mangled ones.
+                    files = di.EnumerateFiles("*", new EnumerationOptions
+                    {
+                        RecurseSubdirectories = recursive,
+                        IgnoreInaccessible = true
+                    }).ToList();
+                }
+
+                // Pass 2: repair any leaf filenames that still contain '?'
+                for (var i = 0; i < files.Count; i++)
+                {
+                    var f = files[i];
+                    if (!f.FullName.Contains('?'))
+                    {
+                        continue;
+                    }
+
+                    var repairedPath = LinuxNativeFileHelper.RepairAndLocatePath(f.FullName);
+                    if (repairedPath != null)
+                    {
+                        files[i] = _fileSystem.FileInfo.FromFileName(repairedPath);
+                    }
+                }
+            }
+
+            return files;
         }
 
         public IFileInfo GetFileInfo(string path)

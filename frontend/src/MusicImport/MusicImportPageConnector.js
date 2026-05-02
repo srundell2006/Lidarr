@@ -4,7 +4,9 @@ import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
 import {
   clearMusicImport,
+  deleteMusicImportDuplicates,
   fetchMusicImportItems,
+  lookupMusicImportRecording,
   saveMusicImportItems
 } from 'Store/Actions/musicImportActions';
 import { fetchImportFolders } from 'Store/Actions/settingsActions';
@@ -33,6 +35,8 @@ function createMapStateToProps() {
 const mapDispatchToProps = {
   dispatchFetchMusicImportItems: fetchMusicImportItems,
   dispatchSaveMusicImportItems: saveMusicImportItems,
+  dispatchDeleteMusicImportDuplicates: deleteMusicImportDuplicates,
+  dispatchLookupMusicImportRecording: lookupMusicImportRecording,
   dispatchClearMusicImport: clearMusicImport,
   dispatchFetchImportFolders: fetchImportFolders
 };
@@ -66,12 +70,22 @@ class MusicImportPageConnector extends Component {
     this.props.dispatchSaveMusicImportItems({ ids });
   };
 
+  onDeleteDuplicatesPress = (ids) => {
+    this.props.dispatchDeleteMusicImportDuplicates({ ids });
+  };
+
+  onLookupRecording = (itemId, recordingId) => {
+    this.props.dispatchLookupMusicImportRecording({ itemId, recordingId });
+  };
+
   render() {
     return (
       <MusicImportPage
         {...this.props}
         onRefreshPress={this.onRefreshPress}
         onImportPress={this.onImportPress}
+        onDeleteDuplicatesPress={this.onDeleteDuplicatesPress}
+        onLookupRecording={this.onLookupRecording}
       />
     );
   }
@@ -81,6 +95,8 @@ MusicImportPageConnector.propTypes = {
   importFolder: PropTypes.object,
   dispatchFetchMusicImportItems: PropTypes.func.isRequired,
   dispatchSaveMusicImportItems: PropTypes.func.isRequired,
+  dispatchDeleteMusicImportDuplicates: PropTypes.func.isRequired,
+  dispatchLookupMusicImportRecording: PropTypes.func.isRequired,
   dispatchClearMusicImport: PropTypes.func.isRequired,
   dispatchFetchImportFolders: PropTypes.func.isRequired
 };

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using NLog;
+using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Instrumentation;
 using NzbDrone.Common.Instrumentation.Extensions;
@@ -67,6 +68,20 @@ namespace NzbDrone.Core.MediaFiles
 
             IsValid = false;
             TagLib.File file = null;
+
+            // If the path contains '?' it was mangled by .NET's UTF-8 decoder from a
+            // non-UTF-8 filename (e.g. Windows-1252 curly quotes).  Try to repair and
+            // locate the real path before handing it to TagLib.
+            if (path.Contains('?'))
+            {
+                var repairedPath = LinuxNativeFileHelper.RepairAndLocatePath(path);
+                if (repairedPath != null)
+                {
+                    Logger.Debug("Repaired mangled path for tag read: '{0}' → '{1}'", path, repairedPath);
+                    path = repairedPath;
+                }
+            }
+
             try
             {
                 file = TagLib.File.Create(path);
@@ -213,8 +228,10 @@ namespace NzbDrone.Core.MediaFiles
             // make sure these are initialized to avoid errors later on
             if (Quality == null)
             {
-                Quality = QualityParser.ParseQuality(path, null, EstimateBitrate(file, path));
-                Logger.Debug($"Unable to parse qulity from tag, Quality parsed from file path: {Quality}, Source: {Quality.QualityDetectionSource}");
+                // `file` was disposed in the finally block above, so pass null here.
+                // EstimateBitrate handles null by returning 0 (bitrate unknown).
+                Quality = QualityParser.ParseQuality(path, null, EstimateBitrate(null, path));
+                Logger.Debug($"Unable to parse quality from tag, Quality parsed from file path: {Quality}, Source: {Quality.QualityDetectionSource}");
             }
 
             MediaInfo = MediaInfo ?? new MediaInfoModel();

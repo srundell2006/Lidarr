@@ -19,6 +19,7 @@ namespace NzbDrone.Core.Music
         List<Track> TracksWithoutFiles(int albumId);
         void SetFileId(List<Track> tracks);
         void DetachTrackFile(int trackFileId);
+        Track FindByForeignRecordingId(string foreignRecordingId);
     }
 
     public class TrackRepository : BasicRepository<Track>, ITrackRepository
@@ -112,6 +113,11 @@ namespace NzbDrone.Core.Music
             var tracks = GetTracksByFileId(trackFileId);
             tracks.ForEach(x => x.TrackFileId = 0);
             SetFileId(tracks);
+        }
+
+        public Track FindByForeignRecordingId(string foreignRecordingId)
+        {
+            return Query(t => t.ForeignRecordingId == foreignRecordingId).FirstOrDefault();
         }
     }
 }

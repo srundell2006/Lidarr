@@ -25,6 +25,7 @@ namespace NzbDrone.Core.Music
         void UpdateMany(List<Track> tracks);
         void DeleteMany(List<Track> tracks);
         void SetFileIds(List<Track> tracks);
+        Track GetTrackByForeignRecordingId(string foreignRecordingId);
     }
 
     public class TrackService : ITrackService,
@@ -85,6 +86,11 @@ namespace NzbDrone.Core.Music
         public List<Track> TracksWithoutFiles(int albumId)
         {
             return _trackRepository.TracksWithoutFiles(albumId);
+        }
+
+        public Track GetTrackByForeignRecordingId(string foreignRecordingId)
+        {
+            return _trackRepository.FindByForeignRecordingId(foreignRecordingId);
         }
 
         public List<Track> GetTracksByFileId(int trackFileId)

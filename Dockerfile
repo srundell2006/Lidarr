@@ -35,6 +35,19 @@ WORKDIR /app
 COPY --from=backend-build /app ./
 COPY --from=ui-build /src/_output/UI ./UI
 
+# Install full ICU data + locale so non-ASCII filenames (é, ü, ñ, CJK, etc.)
+# are read correctly.  Without this the default "C" locale replaces any byte
+# outside ASCII with '?' before the path ever reaches .NET / TagLib.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends locales && \
+    sed -i 's/^# *\(en_US.UTF-8\)/\1/' /etc/locale.gen && \
+    locale-gen && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV LANG=en_US.UTF-8 \
+    LANGUAGE=en_US:en \
+    LC_ALL=en_US.UTF-8
+
 RUN groupadd -g 1000 lidarr && \
     useradd -u 1000 -g lidarr -m lidarr && \
     mkdir -p /config /data && \

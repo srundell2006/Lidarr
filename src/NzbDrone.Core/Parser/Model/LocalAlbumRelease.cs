@@ -41,6 +41,11 @@ namespace NzbDrone.Core.Parser.Model
             if (AlbumRelease != null)
             {
                 LocalTracks = LocalTracks.Concat(ExistingTracks).DistinctBy(x => x.Path).ToList();
+
+                var existingPaths = new HashSet<string>(
+                    ExistingTracks.Select(e => e.Path),
+                    StringComparer.OrdinalIgnoreCase);
+
                 foreach (var localTrack in LocalTracks)
                 {
                     localTrack.Release = AlbumRelease;
@@ -52,6 +57,46 @@ namespace NzbDrone.Core.Parser.Model
                         var track = TrackMapping.Mapping[localTrack].Item1;
                         localTrack.Tracks = new List<Track> { track };
                         localTrack.Distance = TrackMapping.Mapping[localTrack].Item2;
+                    }
+                }
+
+                // Secondary pass: import files that lost the 1:1 Munkres assignment to a
+                // library copy (ExistingFile) end up with Tracks = [].  Re-link them to
+                // the corresponding DB Track by absolute track number so that
+                // HasExistingFiles is set correctly in the Music Import UI.
+                if (AlbumRelease.Tracks.IsLoaded)
+                {
+                    var tracksWithFiles = AlbumRelease.Tracks.Value
+                        .Where(t => t.TrackFileId > 0)
+                        .ToList();
+
+                    foreach (var localTrack in LocalTracks)
+                    {
+                        // Only process unmapped tracks from the import folder (not library copies)
+                        if (localTrack.Tracks.Count > 0 || existingPaths.Contains(localTrack.Path))
+                        {
+                            continue;
+                        }
+
+                        var trackNumber = localTrack.FileTrackInfo?.TrackNumbers?.FirstOrDefault() ?? 0;
+                        if (trackNumber <= 0)
+                        {
+                            continue;
+                        }
+
+                        var discNumber = localTrack.FileTrackInfo?.DiscNumber ?? 0;
+
+                        // Prefer a disc-aware match; fall back to track number only
+                        // (covers single-disc albums where DiscNumber may be 0).
+                        var matchingTrack = discNumber > 0
+                            ? tracksWithFiles.FirstOrDefault(t => t.MediumNumber == discNumber && t.AbsoluteTrackNumber == trackNumber)
+                              ?? tracksWithFiles.FirstOrDefault(t => t.AbsoluteTrackNumber == trackNumber)
+                            : tracksWithFiles.FirstOrDefault(t => t.AbsoluteTrackNumber == trackNumber);
+
+                        if (matchingTrack != null)
+                        {
+                            localTrack.Tracks = new List<Track> { matchingTrack };
+                        }
                     }
                 }
             }

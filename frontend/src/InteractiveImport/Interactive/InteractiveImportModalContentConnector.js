@@ -164,7 +164,7 @@ class InteractiveImportModalContentConnector extends Component {
           artistId: artist.id,
           albumId: album.id,
           albumReleaseId,
-          trackIds: _.map(tracks, 'id'),
+          trackIds: _.map(tracks, 'id').filter((id) => id != null),
           quality,
           indexerFlags,
           downloadId: this.props.downloadId,

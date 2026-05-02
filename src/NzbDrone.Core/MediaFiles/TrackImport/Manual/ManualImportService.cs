@@ -88,6 +88,15 @@ namespace NzbDrone.Core.MediaFiles.TrackImport.Manual
 
         public List<ManualImportItem> GetMediaFiles(string path, string downloadId, Artist artist, FilterFilesType filter, bool replaceExistingFiles)
         {
+            // Before scanning, repair any filenames whose bytes are not valid UTF-8
+            // (common with music ripped on Windows using encodings like Windows-1252).
+            // .NET replaces invalid UTF-8 bytes with '?' making those files unreachable;
+            // renaming them to their proper UTF-8 form fixes the issue permanently.
+            if (_diskProvider.FolderExists(path))
+            {
+                LinuxNativeFileHelper.RepairFolderEncoding(path);
+            }
+
             if (downloadId.IsNotNullOrWhiteSpace())
             {
                 var trackedDownload = _trackedDownloadService.Find(downloadId);
@@ -176,9 +185,9 @@ namespace NzbDrone.Core.MediaFiles.TrackImport.Manual
 
             var artistFiles = _diskScanService.GetAudioFiles(folder).ToList();
 
-            if (artist == null && artistFiles.Count > 100)
+            if (artist == null && artistFiles.Count > 3000)
             {
-                _logger.Warn("Unable to determine artist from folder name and found more than 100 files. Skipping parsing");
+                _logger.Warn("Unable to determine artist from folder name and found more than 3000 files. Skipping parsing");
                 return ProcessDownloadDirectory(folder, artistFiles);
             }
 
@@ -197,7 +206,13 @@ namespace NzbDrone.Core.MediaFiles.TrackImport.Manual
                 NewDownload = true,
                 SingleRelease = false,
                 IncludeExisting = !replaceExistingFiles,
-                AddNewArtists = false
+
+                // Allow the identification service to fetch remote (Skyhook) candidates
+                // so that artists not yet in the library appear as proper matches on the
+                // Music Import page.  EnsureArtistAdded / EnsureAlbumAdded in
+                // ImportApprovedTracks will add them to the library when the user
+                // triggers the import.
+                AddNewArtists = true
             };
 
             var decisions = _importDecisionMaker.GetImportDecisions(artistFiles, idOverrides, itemInfo, config);
@@ -343,7 +358,20 @@ namespace NzbDrone.Core.MediaFiles.TrackImport.Manual
 
             item.Quality = decision.Item.Quality;
             item.IndexerFlags = (int)decision.Item.IndexerFlags;
-            item.Size = _diskProvider.GetFileSize(decision.Item.Path);
+
+            // Flag the item when any matched track already has a library file so the
+            // Music Import UI can warn the user before they trigger an import.
+            item.HasExistingFiles = decision.Item.Tracks.Any(t => t.TrackFileId > 0);
+
+            try
+            {
+                item.Size = _diskProvider.GetFileSize(decision.Item.Path);
+            }
+            catch (Exception ex)
+            {
+                _logger.Warn(ex, "Unable to get file size for '{0}' — non-ASCII filename encoding issue? Size will be reported as 0.", decision.Item.Path);
+                item.Size = 0;
+            }
             item.Rejections = decision.Rejections;
             item.Tags = decision.Item.FileTrackInfo;
             item.AdditionalFile = decision.Item.AdditionalFile;
@@ -359,8 +387,29 @@ namespace NzbDrone.Core.MediaFiles.TrackImport.Manual
 
             var imported = new List<ImportResult>();
             var importedTrackedDownload = new List<ManuallyImportedFile>();
-            var albumIds = message.Files.GroupBy(e => e.AlbumId).ToList();
             var fileCount = 0;
+
+            // Files for artists already in the library AND whose album is already in the
+            // library use DB IDs and the standard path.
+            //
+            // All other files go through the re-identification path (AddNewArtists = true)
+            // so that EnsureArtistAdded / EnsureAlbumAdded can add missing artists or albums
+            // synchronously before the import runs.
+            //
+            // The "known artist, new album" case arises when the Music Import scan matched
+            // the artist against the DB but identified the album against a remote Skyhook
+            // result that isn't yet in the library (album.Id == 0 in the scan result).
+            // The frontend sends ArtistId > 0, AlbumId == 0 — those files must also go
+            // through re-identification so the album gets added before import.
+            var newArtistFiles = message.Files
+                .Where(f => f.ArtistId == 0 || f.AlbumId <= 0 || f.AlbumReleaseId <= 0)
+                .ToList();
+
+            var knownArtistFiles = message.Files
+                .Where(f => f.ArtistId > 0 && f.AlbumId > 0 && f.AlbumReleaseId > 0)
+                .ToList();
+
+            var albumIds = knownArtistFiles.GroupBy(e => e.AlbumId).ToList();
 
             foreach (var importAlbumId in albumIds)
             {
@@ -434,7 +483,64 @@ namespace NzbDrone.Core.MediaFiles.TrackImport.Manual
                 }
             }
 
+            // Import files whose artist or album is not yet in the library (or whose DB IDs
+            // were not resolved during the scan, e.g. a Skyhook-identified album for an
+            // artist already in the library).  Re-run identification with AddNewArtists = true
+            // so the full EnsureArtistAdded / EnsureAlbumAdded pipeline fires: it fetches
+            // artist and album metadata from Skyhook, inserts them into the DB (including a
+            // synchronous RefreshAlbumInfo to populate tracks), then proceeds with the normal
+            // file import and move.  At the end it queues a background BulkRefreshArtistCommand
+            // to fill in covers, biography, etc.
+            if (newArtistFiles.Any())
+            {
+                _logger.ProgressInfo("Importing {0} file(s) requiring re-identification (new artist or album)", newArtistFiles.Count);
+
+                var fileInfos = newArtistFiles.Select(f => _diskProvider.GetFileInfo(f.Path)).ToList();
+                var newArtistConfig = new ImportDecisionMakerConfig
+                {
+                    Filter = FilterFilesType.None,
+                    NewDownload = true,
+                    SingleRelease = false,
+                    IncludeExisting = !message.ReplaceExistingFiles,
+                    AddNewArtists = true
+                };
+
+                var newArtistDecisions = _importDecisionMaker.GetImportDecisions(fileInfos, null, null, newArtistConfig);
+                var newArtistResults = _importApprovedTracks.Import(newArtistDecisions, message.ReplaceExistingFiles, null, message.ImportMode);
+                imported.AddRange(newArtistResults);
+                fileCount += newArtistFiles.Count;
+            }
+
             _logger.ProgressTrace("Manually imported {0} files", imported.Count);
+
+            // When requested, delete source files that were submitted but not
+            // successfully imported (rejected by quality check, unrecognised, etc.).
+            // Only files that still exist at their original path are removed — a
+            // successful Move import will already have relocated the file.
+            if (message.DeleteRejectedFiles)
+            {
+                var rejectedPaths = imported
+                    .Where(r => r.Result != ImportResultType.Imported)
+                    .Select(r => r.ImportDecision.Item.Path)
+                    .Distinct()
+                    .ToList();
+
+                foreach (var path in rejectedPaths)
+                {
+                    try
+                    {
+                        if (_diskProvider.FileExists(path))
+                        {
+                            _logger.Info("Deleting rejected/unimported source file: {0}", path);
+                            _diskProvider.DeleteFile(path);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Warn(ex, "Failed to delete rejected source file '{0}'", path);
+                    }
+                }
+            }
 
             foreach (var groupedTrackedDownload in importedTrackedDownload.GroupBy(i => i.TrackedDownload.DownloadItem.DownloadId).ToList())
             {

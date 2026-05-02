@@ -234,6 +234,31 @@ namespace NzbDrone.Core.MediaFiles.TrackImport
 
                     if (!localTrack.ExistingFile)
                     {
+                        // Quality-aware replacement: only import if the new file is
+                        // strictly better quality than the existing library file.
+                        // Equal-quality files are treated as "already in library" and
+                        // skipped — the source will be cleaned up by DeleteRejectedFiles.
+                        var newWeight = Quality.DefaultQualityDefinitions
+                            .FirstOrDefault(q => q.Quality == localTrack.Quality.Quality)?.Weight ?? 0;
+
+                        var blockedByEqualOrHigherQuality = localTrack.Tracks
+                            .Where(t => t.TrackFileId > 0)
+                            .Select(t => t.TrackFile.Value)
+                            .Where(f => f != null)
+                            .Any(f =>
+                            {
+                                var existingWeight = Quality.DefaultQualityDefinitions
+                                    .FirstOrDefault(q => q.Quality == f.Quality.Quality)?.Weight ?? 0;
+                                return existingWeight >= newWeight;
+                            });
+
+                        if (blockedByEqualOrHigherQuality)
+                        {
+                            _logger.Debug("Skipping import of '{0}' — existing track file has equal or higher quality", localTrack.Path);
+                            importResults.Add(new ImportResult(importDecision, "Existing file has equal or higher quality, skipping replacement"));
+                            continue;
+                        }
+
                         trackFile.SceneName = localTrack.SceneName;
                         trackFile.OriginalFilePath = GetOriginalFilePath(downloadClientItem, localTrack);
 

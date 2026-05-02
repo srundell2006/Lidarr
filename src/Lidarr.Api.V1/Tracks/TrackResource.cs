@@ -47,7 +47,7 @@ namespace Lidarr.Api.V1.Tracks
             {
                 Id = model.Id,
 
-                ArtistId = model.Artist.Value.Id,
+                ArtistId = model.Artist?.Value?.Id ?? 0,
                 ForeignTrackId = model.ForeignTrackId,
                 ForeignRecordingId = model.ForeignRecordingId,
                 TrackFileId = model.TrackFileId,

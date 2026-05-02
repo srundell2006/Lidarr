@@ -45,7 +45,15 @@ namespace NzbDrone.Core.MediaFiles.TrackImport.Aggregation
                 }
             }
 
-            localTrack.Size = _diskProvider.GetFileSize(localTrack.Path);
+            try
+            {
+                localTrack.Size = _diskProvider.GetFileSize(localTrack.Path);
+            }
+            catch (Exception ex)
+            {
+                _logger.Warn(ex, "Unable to get file size for '{0}' — non-ASCII filename encoding issue? Size will be reported as 0.", localTrack.Path);
+                localTrack.Size = 0;
+            }
             localTrack.SceneName = localTrack.SceneSource ? SceneNameCalculator.GetSceneName(localTrack) : null;
 
             foreach (var augmenter in _trackAugmenters)

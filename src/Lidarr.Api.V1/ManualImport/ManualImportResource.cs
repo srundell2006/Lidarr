@@ -30,6 +30,7 @@ namespace Lidarr.Api.V1.ManualImport
         public bool AdditionalFile { get; set; }
         public bool ReplaceExistingFiles { get; set; }
         public bool DisableReleaseSwitching { get; set; }
+        public bool HasExistingFiles { get; set; }
     }
 
     public static class ManualImportResourceMapper
@@ -62,7 +63,8 @@ namespace Lidarr.Api.V1.ManualImport
                 AudioTags = model.Tags,
                 AdditionalFile = model.AdditionalFile,
                 ReplaceExistingFiles = model.ReplaceExistingFiles,
-                DisableReleaseSwitching = model.DisableReleaseSwitching
+                DisableReleaseSwitching = model.DisableReleaseSwitching,
+                HasExistingFiles = model.HasExistingFiles
             };
         }
 

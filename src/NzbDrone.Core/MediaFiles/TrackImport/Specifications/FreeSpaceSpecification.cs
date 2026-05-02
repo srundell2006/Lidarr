@@ -39,6 +39,14 @@ namespace NzbDrone.Core.MediaFiles.TrackImport.Specifications
                     return Decision.Accept();
                 }
 
+                if (string.IsNullOrEmpty(item.Artist?.Path))
+                {
+                    // Artist path is not set yet (new artist pending EnsureArtistAdded).
+                    // We cannot determine the destination volume, so skip the check.
+                    _logger.Debug("Skipping free space check: artist path not yet set for '{0}'", item.Path);
+                    return Decision.Accept();
+                }
+
                 var path = Directory.GetParent(item.Artist.Path);
                 var freeSpace = _diskProvider.GetAvailableSpace(path.FullName);
 

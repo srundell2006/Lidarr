@@ -1,20 +1,29 @@
 interface CssExports {
   'tableContainer': string;
   'importFolderPath': string;
+  'savingAlert': string;
   'table': string;
   'selectCell': string;
   'pathCell': string;
+  'recordingIdCell': string;
   'artistCell': string;
   'albumCell': string;
   'tracksCell': string;
   'qualityCell': string;
   'statusCell': string;
   'validRow': string;
-  'rejectedRow': string;
+  'invalidRow': string;
+  'recordingCell': string;
+  'recordingTagId': string;
+  'recordingInput': string;
+  'lookupBtn': string;
+  'lookupError': string;
+  'lookupErrorText': string;
   'noMatch': string;
   'rejections': string;
   'rejection': string;
-  'importAlert': string;
+  'tableFooter': string;
+  'importNote': string;
 }
 export type Styles = CssExports;
 declare const styles: CssExports;

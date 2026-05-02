@@ -66,12 +66,20 @@ namespace Lidarr.Api.V1.Commands
                     ? CommandPriority.High
                     : CommandPriority.Normal;
 
-                dynamic command = STJson.Deserialize(body, commandType);
+                // Cast to Command (not dynamic) so that property accesses are
+                // resolved statically through the base-class vtable.  Using
+                // `dynamic` here caused a RuntimeBinderException for commands
+                // whose SendUpdatesToClient is a getter-only override (e.g.
+                // ManualImportCommand): the DLR found no setter on the derived
+                // type and threw "cannot be assigned to -- it is read only".
+                // Through a Command reference the base-class setter is used
+                // directly, which is the correct behaviour.
+                var command = (Command)STJson.Deserialize(body, commandType);
 
                 command.Trigger = CommandTrigger.Manual;
                 command.SuppressMessages = !command.SendUpdatesToClient;
                 command.SendUpdatesToClient = true;
-                command.ClientUserAgent = Request.Headers["UserAgent"];
+                command.ClientUserAgent = (string)Request.Headers["UserAgent"];
 
                 var trackedCommand = _commandQueueManager.Push(command, priority, CommandTrigger.Manual);
 

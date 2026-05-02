@@ -801,6 +801,7 @@
   "MusicBrainzTrackID": "MusicBrainz Track ID",
   "MusicbrainzId": "Musicbrainz Id",
   "MusicImport": "Music Import",
+  "ImportMoveRename": "Import, Move & Rename",
   "MustContain": "Must Contain",
   "MustNotContain": "Must Not Contain",
   "NETCore": ".NET",

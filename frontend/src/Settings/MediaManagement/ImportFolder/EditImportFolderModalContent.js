@@ -41,6 +41,7 @@ function EditImportFolderModalContent(props) {
     id,
     name,
     path,
+    automaticallyImport,
     defaultQualityProfileId,
     defaultMetadataProfileId,
     defaultMonitorOption,
@@ -200,6 +201,20 @@ function EditImportFolderModalContent(props) {
                   name="defaultTags"
                   helpText={translate('DefaultTagsHelpText')}
                   {...defaultTags}
+                  onChange={onInputChange}
+                />
+              </FormGroup>
+
+              <FormGroup>
+                <FormLabel>
+                  Automatically Import
+                </FormLabel>
+
+                <FormInputGroup
+                  type={inputTypes.CHECK}
+                  name="automaticallyImport"
+                  helpText="Automatically import new files added to this folder without requiring manual review"
+                  {...automaticallyImport}
                   onChange={onInputChange}
                 />
               </FormGroup>

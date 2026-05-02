@@ -3,6 +3,9 @@
 }
 
 .importFolderPath {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin-bottom: 15px;
   padding: 10px 12px;
   background-color: var(--inputBackgroundColor);
@@ -10,6 +13,13 @@
   border-radius: 4px;
   font-size: 13px;
   color: var(--defaultColor);
+}
+
+.savingAlert {
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .table {
@@ -29,7 +39,7 @@
 }
 
 .table td {
-  padding: 9px 12px;
+  padding: 7px 12px;
   border-bottom: 1px solid var(--tableBorderColor);
   vertical-align: middle;
   color: var(--defaultColor);
@@ -39,46 +49,141 @@
   background-color: var(--tableRowHoverBackgroundColor);
 }
 
+/* ── column widths ── */
+
 .selectCell {
   width: 36px;
   text-align: center !important;
 }
 
 .pathCell {
-  max-width: 300px;
+  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.recordingIdCell {
+  width: 260px;
+}
+
 .artistCell {
-  width: 180px;
+  width: 150px;
 }
 
 .albumCell {
-  width: 200px;
+  width: 170px;
 }
 
 .tracksCell {
-  width: 80px;
-  text-align: center !important;
+  width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .qualityCell {
-  width: 100px;
+  width: 80px;
 }
 
 .statusCell {
-  width: 200px;
+  width: 180px;
 }
+
+/* ── row states ── */
 
 .validRow {
   background-color: transparent;
 }
 
-.rejectedRow {
-  opacity: 0.6;
+.invalidRow {
+  opacity: 0.65;
 }
+
+/* ── recording ID cell contents ── */
+
+.recordingCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+}
+
+.recordingTagId {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--defaultColor);
+  opacity: 0.85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+  cursor: default;
+}
+
+.recordingInput {
+  flex: 1;
+  padding: 3px 7px;
+  font-size: 12px;
+  font-family: monospace;
+  border: 1px solid var(--inputBorderColor);
+  border-radius: 3px;
+  background-color: var(--inputBackgroundColor);
+  color: var(--defaultColor);
+  min-width: 0;
+}
+
+.recordingInput::placeholder {
+  font-family: inherit;
+  opacity: 0.5;
+  font-size: 11px;
+}
+
+.recordingInput:focus {
+  outline: none;
+  border-color: var(--primaryColor, #5d9cec);
+}
+
+.lookupBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--inputBorderColor);
+  border-radius: 3px;
+  background-color: var(--inputBackgroundColor);
+  color: var(--defaultColor);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.lookupBtn:hover:not(:disabled) {
+  background-color: var(--primaryColor, #5d9cec);
+  border-color: var(--primaryColor, #5d9cec);
+  color: #fff;
+}
+
+.lookupBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.lookupError {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.lookupErrorText {
+  font-size: 11px;
+  color: var(--dangerColor);
+}
+
+/* ── misc ── */
 
 .noMatch {
   color: var(--disabledColor);
@@ -94,11 +199,35 @@
 .rejection {
   font-size: 12px;
   color: var(--dangerColor);
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
-.importAlert {
-  margin-top: 15px;
+.duplicate {
+  font-size: 12px;
+  color: var(--warningColor, #f0ad4e);
+  cursor: default;
+}
+
+.readyToImport {
+  font-size: 12px;
+  color: var(--successColor, #5cb85c);
+}
+
+.duplicateRow {
+  background-color: rgba(240, 173, 78, 0.06);
+}
+
+.tableFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding: 8px 4px;
+  font-size: 13px;
+  color: var(--defaultColor);
+  border-top: 1px solid var(--tableBorderColor);
+}
+
+.importNote {
+  color: var(--secondaryColor, #888);
+  font-size: 12px;
 }
