@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using NLog;
 using NzbDrone.Common.Disk;
@@ -213,6 +214,11 @@ namespace NzbDrone.Core.MediaFiles
                 if (ex is CorruptFileException)
                 {
                     Logger.Warn(ex, $"Tag reading failed for {path}.  File is corrupt");
+                }
+                else if (ex is FileNotFoundException || ex is DirectoryNotFoundException)
+                {
+                    // File was moved, deleted, or is on an unavailable mount — not a code bug.
+                    Logger.Warn("Tag reading skipped — file no longer accessible: {0}", path);
                 }
                 else
                 {
