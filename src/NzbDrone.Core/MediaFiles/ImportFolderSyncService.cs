@@ -101,23 +101,32 @@ namespace NzbDrone.Core.MediaFiles
 
             foreach (var group in groups)
             {
+                var directoryPath = group.Key;
+
                 try
                 {
-                    ProcessDirectory(importRoot, group.Key, group.ToList());
+                    ProcessDirectory(directoryPath, group.ToList());
+
+                    // After processing, send the whole subdirectory to the recycle bin.
+                    // (Files that were successfully imported have already been moved to
+                    // the library; everything remaining — unmatched, rejected, etc. —
+                    // goes with the folder.)
+                    // We never recycle the import root itself, only its subdirectories.
+                    if (!directoryPath.Equals(importRoot, StringComparison.OrdinalIgnoreCase))
+                    {
+                        MoveDirectoryToRecycleBin(directoryPath);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error(ex, "Error processing import directory: {0}", group.Key);
+                    _logger.Error(ex, "Error processing import directory: {0}", directoryPath);
                 }
             }
-
-            // Remove any empty subdirectories left behind after moving files
-            CleanupEmptySubdirectories(importRoot);
         }
 
         // ── per-directory ─────────────────────────────────────────────────────────
 
-        private void ProcessDirectory(string importRoot, string directoryPath, List<IFileInfo> audioFiles)
+        private void ProcessDirectory(string directoryPath, List<IFileInfo> audioFiles)
         {
             _logger.ProgressInfo("Importing from: {0} ({1} file{2})",
                 directoryPath, audioFiles.Count, audioFiles.Count == 1 ? "" : "s");
@@ -151,47 +160,25 @@ namespace NzbDrone.Core.MediaFiles
             var importedCount = results.Count(r => r.Result == ImportResultType.Imported);
             _logger.Info("Imported {0}/{1} file{2} from {3}",
                 importedCount, audioFiles.Count, audioFiles.Count == 1 ? "" : "s", directoryPath);
-
-            // Move every file that was not successfully imported to the Recycle Bin.
-            // Imported files have already been moved to the library by ImportApprovedTracks.
-            var notImportedPaths = results
-                .Where(r => r.Result != ImportResultType.Imported)
-                .Select(r => r.ImportDecision.Item.Path)
-                .Distinct()
-                .ToList();
-
-            foreach (var filePath in notImportedPaths)
-            {
-                MoveToRecycleBin(importRoot, filePath);
-            }
         }
 
         // ── helpers ───────────────────────────────────────────────────────────────
 
-        private void MoveToRecycleBin(string importRoot, string filePath)
+        private void MoveDirectoryToRecycleBin(string directoryPath)
         {
             try
             {
-                if (!_diskProvider.FileExists(filePath))
+                if (!_diskProvider.FolderExists(directoryPath))
                 {
-                    // Already moved (e.g. a successful import relocated it) — nothing to do
                     return;
                 }
 
-                // Preserve the relative sub-path inside the recycle bin so the user
-                // can tell at a glance which import folder the file came from.
-                var root     = importRoot.TrimEnd('/', '\\');
-                var relative = filePath.Length > root.Length
-                    ? filePath.Substring(root.Length).TrimStart('/', '\\')
-                    : Path.GetFileName(filePath);
-                var subfolder = Path.GetDirectoryName(relative) ?? string.Empty;
-
-                _logger.Info("Moving unimported file to recycle bin: {0}", filePath);
-                _recycleBinProvider.DeleteFile(filePath, subfolder);
+                _logger.Info("Moving processed directory to recycle bin: {0}", directoryPath);
+                _recycleBinProvider.DeleteFolder(directoryPath);
             }
             catch (Exception ex)
             {
-                _logger.Warn(ex, "Failed to move file to recycle bin: {0}", filePath);
+                _logger.Warn(ex, "Failed to move directory to recycle bin: {0}", directoryPath);
             }
         }
 
@@ -211,38 +198,6 @@ namespace NzbDrone.Core.MediaFiles
             return firstSegment.IsNullOrWhiteSpace()
                 ? importRoot
                 : Path.Combine(importRoot, firstSegment);
-        }
-
-        private void CleanupEmptySubdirectories(string rootPath)
-        {
-            try
-            {
-                // Sort by descending path length so leaf directories are removed first,
-                // which allows their now-empty parents to be removed in the same pass.
-                var subdirs = Directory
-                    .GetDirectories(rootPath, "*", SearchOption.AllDirectories)
-                    .OrderByDescending(d => d.Length);
-
-                foreach (var dir in subdirs)
-                {
-                    try
-                    {
-                        if (!Directory.EnumerateFileSystemEntries(dir).Any())
-                        {
-                            _logger.Debug("Removing empty directory: {0}", dir);
-                            _diskProvider.DeleteFolder(dir, false);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Warn(ex, "Could not remove directory: {0}", dir);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Warn(ex, "Error enumerating subdirectories of: {0}", rootPath);
-            }
         }
     }
 }
