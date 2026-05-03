@@ -144,7 +144,7 @@ namespace NzbDrone.Core.MediaFiles
                 NewDownload     = true,
                 SingleRelease   = false,
                 IncludeExisting = false,
-                AddNewArtists   = false,
+                AddNewArtists   = true,
                 // Allow the album to be incomplete — we may be importing a single
                 // or a partial rip, and the missing tracks should not block the
                 // ones that are present.

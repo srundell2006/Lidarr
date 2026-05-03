@@ -397,7 +397,19 @@ namespace NzbDrone.Core.MediaFiles.TrackImport
                 if (dbArtist == null)
                 {
                     _logger.Debug($"Adding remote artist {artist}");
-                    var rootFolder = _rootFolderService.GetBestRootFolder(decisions.First().Item.Path);
+
+                    // Prefer a regular (non-import) root folder for the new artist's permanent
+                    // home so that imported files land in the library rather than in an import
+                    // staging folder.  If a regular root folder is a parent of the source file,
+                    // use that; otherwise fall back to the first configured regular root folder;
+                    // final fallback is the old behaviour of matching any root folder type.
+                    var itemPath = decisions.First().Item.Path;
+                    var regularRootFolders = _rootFolderService.AllRootFolders();
+                    var rootFolder = regularRootFolders
+                        .Where(r => r.Path.IsParentPath(itemPath))
+                        .MaxBy(r => r.Path.Length)
+                        ?? regularRootFolders.FirstOrDefault()
+                        ?? _rootFolderService.GetBestRootFolder(itemPath);
 
                     artist.RootFolderPath = rootFolder.Path;
                     artist.MetadataProfileId = rootFolder.DefaultMetadataProfileId;
