@@ -6,10 +6,10 @@ using System.Linq;
 using NLog;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
+using NzbDrone.Common.Instrumentation.Extensions;
 using NzbDrone.Core.MediaFiles.Commands;
 using NzbDrone.Core.MediaFiles.TrackImport;
 using NzbDrone.Core.Messaging.Commands;
-using NzbDrone.Core.Parser;
 using NzbDrone.Core.RootFolders;
 
 namespace NzbDrone.Core.MediaFiles
@@ -127,7 +127,7 @@ namespace NzbDrone.Core.MediaFiles
             {
                 // Give the identification service a hint from the folder name
                 // (e.g. "Artist - Album (Year)") to improve match quality
-                ParsedAlbumInfo = Parser.ParseAlbumTitle(new DirectoryInfo(directoryPath).Name)
+                ParsedAlbumInfo = Parser.Parser.ParseAlbumTitle(new DirectoryInfo(directoryPath).Name)
             };
             var config = new ImportDecisionMakerConfig
             {
