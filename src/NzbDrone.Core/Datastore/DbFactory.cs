@@ -3,6 +3,7 @@ using System.Data.Common;
 using System.Data.SQLite;
 using System.Net.Sockets;
 using System.Threading;
+using Dapper;
 using NLog;
 using Npgsql;
 using NzbDrone.Common.Disk;
@@ -108,12 +109,54 @@ namespace NzbDrone.Core.Datastore
             return db;
         }
 
+        /// <summary>
+        /// Resets all PostgreSQL sequences so they are at least as large as the current
+        /// maximum Id in each table. This is necessary after restoring a backup or migrating
+        /// data with explicit Id values, which bypass the sequence and leave it behind.
+        /// </summary>
+        private static void FixPostgresSequences(string connectionString)
+        {
+            const string sql = @"
+DO $$
+DECLARE
+    r RECORD;
+    max_id BIGINT;
+BEGIN
+    FOR r IN
+        SELECT
+            t.relname  AS table_name,
+            a.attname  AS col_name,
+            s.relname  AS seq_name
+        FROM pg_class s
+        JOIN pg_depend d ON d.objid = s.oid AND d.classid = 'pg_class'::regclass AND d.refclassid = 'pg_class'::regclass
+        JOIN pg_class t  ON t.oid = d.refobjid
+        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
+        WHERE s.relkind = 'S'
+          AND t.relkind = 'r'
+    LOOP
+        EXECUTE format('SELECT COALESCE(MAX("Id"), 0) FROM ""%s""', r.table_name) INTO max_id;
+        IF max_id > 0 THEN
+            EXECUTE format('SELECT setval(''%s'', %s)', r.seq_name, max_id);
+        END IF;
+    END LOOP;
+END $$;
+";
+            using var conn = new NpgsqlConnection(connectionString);
+            conn.Open();
+            conn.Execute(sql);
+        }
+
         private void CreateMain(string connectionString, MigrationContext migrationContext, DatabaseType databaseType)
         {
             try
             {
                 _restoreDatabaseService.Restore();
                 _migrationController.Migrate(connectionString, migrationContext, databaseType);
+
+                if (databaseType == DatabaseType.PostgreSQL)
+                {
+                    FixPostgresSequences(connectionString);
+                }
             }
             catch (SQLiteException e)
             {
