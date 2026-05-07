@@ -116,34 +116,33 @@ namespace NzbDrone.Core.Datastore
         /// </summary>
         private static void FixPostgresSequences(string connectionString)
         {
+            // Use %I (identifier quoting) in format() so no double-quotes are needed in
+            // the SQL string literal, avoiding C# verbatim-string escaping pitfalls.
+            // information_schema.columns scoped to 'public' gives us only user tables.
             const string sql = @"
 DO $$
 DECLARE
     r RECORD;
     max_id BIGINT;
+    seq TEXT;
 BEGIN
     FOR r IN
-        SELECT
-            t.relname  AS table_name,
-            a.attname  AS col_name,
-            s.relname  AS seq_name
-        FROM pg_class s
-        JOIN pg_depend d ON d.objid = s.oid AND d.classid = 'pg_class'::regclass AND d.refclassid = 'pg_class'::regclass
-        JOIN pg_class t  ON t.oid = d.refobjid
-        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
-        JOIN pg_namespace n ON n.oid = t.relnamespace
-        WHERE s.relkind = 'S'
-          AND t.relkind = 'r'
-          AND n.nspname = 'public'
+        SELECT table_name, column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND column_default LIKE 'nextval%'
     LOOP
-        BEGIN
-            EXECUTE format('SELECT COALESCE(MAX(""%s""), 0) FROM ""%s""', r.col_name, r.table_name) INTO max_id;
-            IF max_id > 0 THEN
-                EXECUTE format('SELECT setval(''%s'', %s)', r.seq_name, max_id);
-            END IF;
-        EXCEPTION WHEN OTHERS THEN
-            NULL;
-        END;
+        seq := pg_get_serial_sequence(quote_ident(r.table_name), r.column_name);
+        IF seq IS NOT NULL THEN
+            BEGIN
+                EXECUTE format('SELECT COALESCE(MAX(%I), 0) FROM %I', r.column_name, r.table_name) INTO max_id;
+                IF max_id > 0 THEN
+                    PERFORM setval(seq, max_id);
+                END IF;
+            EXCEPTION WHEN OTHERS THEN
+                NULL;
+            END;
+        END IF;
     END LOOP;
 END $$;
 ";
