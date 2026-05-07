@@ -131,8 +131,10 @@ BEGIN
         JOIN pg_depend d ON d.objid = s.oid AND d.classid = 'pg_class'::regclass AND d.refclassid = 'pg_class'::regclass
         JOIN pg_class t  ON t.oid = d.refobjid
         JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = d.refobjsubid
+        JOIN pg_namespace n ON n.oid = t.relnamespace
         WHERE s.relkind = 'S'
           AND t.relkind = 'r'
+          AND n.nspname = 'public'
     LOOP
         EXECUTE format('SELECT COALESCE(MAX(""%s""), 0) FROM ""%s""', r.col_name, r.table_name) INTO max_id;
         IF max_id > 0 THEN
