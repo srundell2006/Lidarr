@@ -134,7 +134,7 @@ BEGIN
         WHERE s.relkind = 'S'
           AND t.relkind = 'r'
     LOOP
-        EXECUTE format('SELECT COALESCE(MAX("Id"), 0) FROM ""%s""', r.table_name) INTO max_id;
+        EXECUTE format('SELECT COALESCE(MAX(""%s""), 0) FROM ""%s""', r.col_name, r.table_name) INTO max_id;
         IF max_id > 0 THEN
             EXECUTE format('SELECT setval(''%s'', %s)', r.seq_name, max_id);
         END IF;
