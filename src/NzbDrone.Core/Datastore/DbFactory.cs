@@ -136,10 +136,14 @@ BEGIN
           AND t.relkind = 'r'
           AND n.nspname = 'public'
     LOOP
-        EXECUTE format('SELECT COALESCE(MAX(""%s""), 0) FROM ""%s""', r.col_name, r.table_name) INTO max_id;
-        IF max_id > 0 THEN
-            EXECUTE format('SELECT setval(''%s'', %s)', r.seq_name, max_id);
-        END IF;
+        BEGIN
+            EXECUTE format('SELECT COALESCE(MAX(""%s""), 0) FROM ""%s""', r.col_name, r.table_name) INTO max_id;
+            IF max_id > 0 THEN
+                EXECUTE format('SELECT setval(''%s'', %s)', r.seq_name, max_id);
+            END IF;
+        EXCEPTION WHEN OTHERS THEN
+            NULL;
+        END;
     END LOOP;
 END $$;
 ";
