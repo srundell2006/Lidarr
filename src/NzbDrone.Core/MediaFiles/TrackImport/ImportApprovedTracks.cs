@@ -314,6 +314,22 @@ namespace NzbDrone.Core.MediaFiles.TrackImport
                 catch (DestinationAlreadyExistsException e)
                 {
                     _logger.Warn(e, "Couldn't import track " + localTrack);
+
+                    // The file already exists in the library — the import folder copy is a
+                    // duplicate. Delete it so it doesn't keep re-appearing on every sync.
+                    try
+                    {
+                        if (_diskProvider.FileExists(localTrack.Path))
+                        {
+                            _logger.Debug("Deleting duplicate import file '{0}' — destination already exists in library.", localTrack.Path);
+                            _diskProvider.DeleteFile(localTrack.Path);
+                        }
+                    }
+                    catch (Exception deleteEx)
+                    {
+                        _logger.Warn(deleteEx, "Failed to delete duplicate import file '{0}'.", localTrack.Path);
+                    }
+
                     importResults.Add(new ImportResult(importDecision, "Failed to import track, Destination already exists."));
                 }
                 catch (UnauthorizedAccessException e)
