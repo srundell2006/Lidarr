@@ -130,6 +130,13 @@ namespace NzbDrone.Core.Jobs
                     {
                         Interval = 60,
                         TypeName = typeof(ImportFolderSyncCommand).FullName
+                    },
+
+                    new ScheduledTask
+                    {
+                        // Interval = 0 means never run automatically — manual trigger only
+                        Interval = 0,
+                        TypeName = typeof(RebuildArtistCommand).FullName
                     }
                 };
 

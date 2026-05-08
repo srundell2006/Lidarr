@@ -202,6 +202,7 @@ class ArtistDetails extends Component {
       isSaving,
       isRefreshing,
       isSearching,
+      isRebuildingArtist,
       isFetching,
       isPopulated,
       albumsError,
@@ -214,6 +215,7 @@ class ArtistDetails extends Component {
       onMonitorTogglePress,
       onRefreshPress,
       onSearchPress,
+      onRebuildDatabasePress,
       artistType
     } = this.props;
 
@@ -322,6 +324,15 @@ class ArtistDetails extends Component {
               label={translate('ManualImport')}
               iconName={icons.INTERACTIVE}
               onPress={this.onInteractiveImportPress}
+            />
+
+            <PageToolbarButton
+              label="Rebuild Database"
+              iconName={icons.REFRESH}
+              spinningName={icons.REFRESH}
+              title="Rescan disk and rename all files to match naming convention"
+              isSpinning={isRebuildingArtist}
+              onPress={onRebuildDatabasePress}
             />
 
             <PageToolbarSeparator />
@@ -734,6 +745,7 @@ ArtistDetails.propTypes = {
   isSaving: PropTypes.bool.isRequired,
   isRefreshing: PropTypes.bool.isRequired,
   isSearching: PropTypes.bool.isRequired,
+  isRebuildingArtist: PropTypes.bool.isRequired,
   isFetching: PropTypes.bool.isRequired,
   isPopulated: PropTypes.bool.isRequired,
   albumsError: PropTypes.object,
@@ -745,7 +757,8 @@ ArtistDetails.propTypes = {
   nextArtist: PropTypes.object.isRequired,
   onMonitorTogglePress: PropTypes.func.isRequired,
   onRefreshPress: PropTypes.func.isRequired,
-  onSearchPress: PropTypes.func.isRequired
+  onSearchPress: PropTypes.func.isRequired,
+  onRebuildDatabasePress: PropTypes.func.isRequired
 };
 
 ArtistDetails.defaultProps = {

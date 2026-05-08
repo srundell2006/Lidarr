@@ -23,4 +23,5 @@ export const RESET_QUALITY_DEFINITIONS = 'ResetQualityDefinitions';
 export const RSS_SYNC = 'RssSync';
 export const SEASON_SEARCH = 'AlbumSearch';
 export const ARTIST_SEARCH = 'ArtistSearch';
+export const REBUILD_ARTIST = 'RebuildArtist';
 export const UNINSTALL_PLUGIN = 'UninstallPlugin';

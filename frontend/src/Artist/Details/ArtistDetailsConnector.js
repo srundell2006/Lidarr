@@ -98,6 +98,7 @@ function createMapStateToProps() {
 
       const previousArtist = sortedArtist[artistIndex - 1] || _.last(sortedArtist);
       const nextArtist = sortedArtist[artistIndex + 1] || _.first(sortedArtist);
+      const isRebuildingArtist = isCommandExecuting(findCommand(commands, { name: commandNames.REBUILD_ARTIST, artistId: artist.id }));
       const isArtistRefreshing = isCommandExecuting(findCommand(commands, { name: commandNames.REFRESH_ARTIST, artistId: artist.id }));
       const artistRefreshingCommand = findCommand(commands, { name: commandNames.REFRESH_ARTIST });
       const allArtistRefreshing = (
@@ -135,6 +136,7 @@ function createMapStateToProps() {
         isSearching,
         isRenamingFiles,
         isRenamingArtist,
+        isRebuildingArtist,
         isFetching,
         isPopulated,
         albumsError,
@@ -243,6 +245,13 @@ class ArtistDetailsConnector extends Component {
     });
   };
 
+  onRebuildDatabasePress = () => {
+    this.props.executeCommand({
+      name: commandNames.REBUILD_ARTIST,
+      artistIds: [this.props.id]
+    });
+  };
+
   //
   // Render
 
@@ -253,6 +262,7 @@ class ArtistDetailsConnector extends Component {
         onMonitorTogglePress={this.onMonitorTogglePress}
         onRefreshPress={this.onRefreshPress}
         onSearchPress={this.onSearchPress}
+        onRebuildDatabasePress={this.onRebuildDatabasePress}
       />
     );
   }
@@ -266,6 +276,7 @@ ArtistDetailsConnector.propTypes = {
   isRefreshing: PropTypes.bool.isRequired,
   isRenamingFiles: PropTypes.bool.isRequired,
   isRenamingArtist: PropTypes.bool.isRequired,
+  isRebuildingArtist: PropTypes.bool.isRequired,
   fetchAlbums: PropTypes.func.isRequired,
   clearAlbums: PropTypes.func.isRequired,
   fetchTrackFiles: PropTypes.func.isRequired,
