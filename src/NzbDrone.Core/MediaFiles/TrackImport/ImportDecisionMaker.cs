@@ -130,22 +130,31 @@ namespace NzbDrone.Core.MediaFiles.TrackImport
                     }
                 }
 
-                var localTrack = new LocalTrack
-                {
-                    DownloadClientAlbumInfo = downloadClientItemInfo,
-                    FolderAlbumInfo = folderInfo,
-                    Path = filePath,
-                    Size = file.Length,
-                    Modified = file.LastWriteTimeUtc,
-                    FileTrackInfo = _audioTagService.ReadTags(filePath),
-                    AdditionalFile = false
-                };
+                LocalTrack localTrack = null;
 
                 try
                 {
+                    localTrack = new LocalTrack
+                    {
+                        DownloadClientAlbumInfo = downloadClientItemInfo,
+                        FolderAlbumInfo = folderInfo,
+                        Path = filePath,
+                        Size = file.Length,
+                        Modified = file.LastWriteTimeUtc,
+                        FileTrackInfo = _audioTagService.ReadTags(filePath),
+                        AdditionalFile = false
+                    };
+
                     // TODO fix otherfiles?
                     _augmentingService.Augment(localTrack, true);
                     localTracks.Add(localTrack);
+                }
+                catch (FileNotFoundException e)
+                {
+                    // File disappeared between scan and read (e.g. already imported and
+                    // moved, or deleted by an external process). Skip gracefully so the
+                    // rest of the album can still be processed.
+                    _logger.Warn(e, "File no longer exists, skipping: {0}", filePath);
                 }
                 catch (AugmentingFailedException)
                 {
@@ -153,9 +162,12 @@ namespace NzbDrone.Core.MediaFiles.TrackImport
                 }
                 catch (Exception e)
                 {
-                    _logger.Error(e, "Couldn't import file. {0}", localTrack.Path);
+                    _logger.Error(e, "Couldn't import file. {0}", filePath);
 
-                    decisions.Add(new ImportDecision<LocalTrack>(localTrack, new Rejection("Unexpected error processing file")));
+                    if (localTrack != null)
+                    {
+                        decisions.Add(new ImportDecision<LocalTrack>(localTrack, new Rejection("Unexpected error processing file")));
+                    }
                 }
             }
 
