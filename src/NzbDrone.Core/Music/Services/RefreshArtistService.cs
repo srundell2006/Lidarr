@@ -294,16 +294,17 @@ namespace NzbDrone.Core.Music
             var rescanAfterRefresh = _configService.RescanAfterRefresh;
             var shouldRescan = true;
             var filter = FilterFilesType.Matched;
-            var folders = _rootFolderService.All().Select(x => x.Path).ToList();
+
+            // Always scope the rescan to individual artist folders rather than the entire root
+            // folder. Scanning the root on a large library reads every file (75k–93k+) even when
+            // only a handful of artists were refreshed. Artist-folder scoping keeps the rescan
+            // fast regardless of library size.
+            var folders = artists.Select(x => x.Path).ToList();
 
             if (isNew)
             {
                 _logger.Trace("Forcing rescan. Reason: New artist added");
                 shouldRescan = true;
-
-                // only rescan artist folders - otherwise it can be super slow for
-                // badly organized / partly matched libraries
-                folders = artists.Select(x => x.Path).ToList();
             }
             else if (rescanAfterRefresh == RescanAfterRefreshType.Never)
             {
