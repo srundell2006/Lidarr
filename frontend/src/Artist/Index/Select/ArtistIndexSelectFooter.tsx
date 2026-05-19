@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { createSelector } from 'reselect';
 import { useSelect } from 'App/SelectContext';
 import AppState from 'App/State/AppState';
-import { RENAME_ARTIST, RETAG_ARTIST } from 'Commands/commandNames';
+import { REBUILD_ARTIST, RENAME_ARTIST, RETAG_ARTIST } from 'Commands/commandNames';
 import SpinnerButton from 'Components/Link/SpinnerButton';
 import PageContentFooter from 'Components/Page/PageContentFooter';
 import usePrevious from 'Helpers/Hooks/usePrevious';
@@ -21,6 +21,7 @@ import RetagArtistModal from './AudioTags/RetagArtistModal';
 import DeleteArtistModal from './Delete/DeleteArtistModal';
 import EditArtistModal from './Edit/EditArtistModal';
 import OrganizeArtistModal from './Organize/OrganizeArtistModal';
+import RebuildArtistModal from './Rebuild/RebuildArtistModal';
 import TagsModal from './Tags/TagsModal';
 import styles from './ArtistIndexSelectFooter.css';
 
@@ -55,11 +56,15 @@ function ArtistIndexSelectFooter() {
   const isRetaggingArtist = useSelector(
     createCommandExecutingSelector(RETAG_ARTIST)
   );
+  const isRebuildingArtist = useSelector(
+    createCommandExecutingSelector(REBUILD_ARTIST)
+  );
 
   const dispatch = useDispatch();
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isOrganizeModalOpen, setIsOrganizeModalOpen] = useState(false);
+  const [isRebuildModalOpen, setIsRebuildModalOpen] = useState(false);
   const [isRetaggingModalOpen, setIsRetaggingModalOpen] = useState(false);
   const [isTagsModalOpen, setIsTagsModalOpen] = useState(false);
   const [isMonitoringModalOpen, setIsMonitoringModalOpen] = useState(false);
@@ -108,6 +113,14 @@ function ArtistIndexSelectFooter() {
   const onOrganizeModalClose = useCallback(() => {
     setIsOrganizeModalOpen(false);
   }, [setIsOrganizeModalOpen]);
+
+  const onRebuildPress = useCallback(() => {
+    setIsRebuildModalOpen(true);
+  }, [setIsRebuildModalOpen]);
+
+  const onRebuildModalClose = useCallback(() => {
+    setIsRebuildModalOpen(false);
+  }, [setIsRebuildModalOpen]);
 
   const onRetagPress = useCallback(() => {
     setIsRetaggingModalOpen(true);
@@ -237,6 +250,15 @@ function ArtistIndexSelectFooter() {
           >
             {translate('UpdateMonitoring')}
           </SpinnerButton>
+
+          <SpinnerButton
+            kind={kinds.WARNING}
+            isSpinning={isRebuildingArtist}
+            isDisabled={!anySelected || isRebuildingArtist}
+            onPress={onRebuildPress}
+          >
+            Rebuild Database
+          </SpinnerButton>
         </div>
 
         <div className={styles.deleteButtons}>
@@ -280,6 +302,12 @@ function ArtistIndexSelectFooter() {
         isOpen={isOrganizeModalOpen}
         artistIds={artistIds}
         onModalClose={onOrganizeModalClose}
+      />
+
+      <RebuildArtistModal
+        isOpen={isRebuildModalOpen}
+        artistIds={artistIds}
+        onModalClose={onRebuildModalClose}
       />
 
       <RetagArtistModal
