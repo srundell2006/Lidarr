@@ -293,7 +293,16 @@ namespace NzbDrone.Core.Music
         {
             var rescanAfterRefresh = _configService.RescanAfterRefresh;
             var shouldRescan = true;
-            var filter = FilterFilesType.Matched;
+
+            // For scheduled/automatic refreshes always use Known so that files already in the
+            // database are skipped if their size and modified-time haven't changed — regardless
+            // of whether they were previously matched to tracks.  Using Matched here caused
+            // every unmatched file in the library (~104k files) to be fed through
+            // ImportDecisionMaker every 24 hours.
+            //
+            // For manual refreshes use Matched so the user can force unmatched files to be
+            // retried against the identification service.
+            var filter = trigger == CommandTrigger.Manual ? FilterFilesType.Matched : FilterFilesType.Known;
 
             // Always scope the rescan to individual artist folders rather than the entire root
             // folder. Scanning the root on a large library reads every file (75k–93k+) even when
@@ -329,8 +338,6 @@ namespace NzbDrone.Core.Music
 
             if (shouldRescan)
             {
-                // some metadata has updated so rescan unmatched
-                // (but don't add new artists to reduce repeated searches against api)
                 _commandQueueManager.Push(new RescanFoldersCommand(folders, filter, false, artists.Select(x => x.Id).ToList()));
             }
         }
