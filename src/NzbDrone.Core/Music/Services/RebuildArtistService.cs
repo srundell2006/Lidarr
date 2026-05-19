@@ -56,21 +56,31 @@ namespace NzbDrone.Core.Music.Services
             {
                 _logger.ProgressInfo("Rebuilding {0} ({1}/{2})", artist.Name, artistIndex++, artists.Count);
 
-                // Step 1 – rescan the artist folder so the database reflects what's on disk
+                // Step 1 – rescan the artist folder so the database reflects what's on disk.
+                //
+                // FilterFilesType.Known skips files already in the DB whose size and
+                // modified-time haven't changed — meaning ReadTags() is only called for
+                // new or changed files, not for every file in the collection.  For a large
+                // library over SMB this is the single biggest time saving.
+                //
+                // Matched files that are already correct in the DB will still be picked up
+                // by the RenameArtistCommand below, so no information is lost.  Unmatched
+                // unchanged files are handled by RecycleUnmappedFiles inside DiskScanService.
                 _diskScanService.Scan(
                     folders: new List<string> { artist.Path },
-                    filter: FilterFilesType.None,
+                    filter: FilterFilesType.Known,
                     addNewArtists: false,
                     artistIds: new List<int> { artist.Id });
-
-                // Step 2 – rename all track files to match the current naming convention.
-                // We push a RenameArtistCommand into the command queue for this artist
-                // so the full rename pipeline (move + DB update + events) runs correctly.
-                _commandQueueManager.Push(new RenameArtistCommand
-                {
-                    ArtistIds = new List<int> { artist.Id }
-                }, trigger: CommandTrigger.Manual);
             }
+
+            // Step 2 – rename all track files for every rebuilt artist in a single command.
+            // Pushing one RenameArtistCommand with all IDs is far more efficient than
+            // queuing a separate command per artist, which would interleave renames with
+            // any other work entering the queue between iterations.
+            _commandQueueManager.Push(new RenameArtistCommand
+            {
+                ArtistIds = artists.Select(x => x.Id).ToList()
+            }, trigger: CommandTrigger.Manual);
 
             _logger.ProgressInfo("Rebuild database completed for {0} artist(s)", artists.Count);
         }

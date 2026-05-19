@@ -121,8 +121,10 @@ namespace NzbDrone.Core.MediaFiles
                     _logger.Debug("Renaming track file: {0}", trackFile);
                     _trackFileMover.MoveTrackFile(trackFile, artist);
 
-                    _mediaFileService.Update(trackFile);
-
+                    // Defer the DB update — collect all renamed files and write them
+                    // in a single batch below.  TrackFileRenamedEvent reads only from
+                    // the in-memory trackFile object, so firing it here before the DB
+                    // write is safe.
                     renamed.Add(new RenamedTrackFile
                     {
                         TrackFile = trackFile,
@@ -149,6 +151,11 @@ namespace NzbDrone.Core.MediaFiles
 
             if (renamed.Any())
             {
+                // Persist all new paths in a single UPDATE statement instead of one
+                // round-trip per file.  For an artist with hundreds of tracks this
+                // turns N individual SQL calls into one bulk write.
+                _mediaFileService.Update(renamed.Select(r => r.TrackFile).ToList());
+
                 _logger.Debug("Removing empty subfolders from: {0}", artist.Path);
                 _diskProvider.RemoveEmptySubfolders(artist.Path);
 
