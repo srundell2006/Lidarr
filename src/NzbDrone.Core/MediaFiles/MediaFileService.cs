@@ -24,6 +24,7 @@ namespace NzbDrone.Core.MediaFiles
         List<TrackFile> GetFilesByAlbum(int albumId);
         List<TrackFile> GetFilesByRelease(int releaseId);
         List<TrackFile> GetUnmappedFiles();
+        List<TrackFile> GetUnmappedFilesWithBasePath(string path);
         List<IFileInfo> FilterUnchangedFiles(List<IFileInfo> files, FilterFilesType filter);
         TrackFile Get(int id);
         List<TrackFile> Get(IEnumerable<int> ids);
@@ -194,6 +195,11 @@ namespace NzbDrone.Core.MediaFiles
         public List<TrackFile> GetUnmappedFiles()
         {
             return _mediaFileRepository.GetUnmappedFiles();
+        }
+
+        public List<TrackFile> GetUnmappedFilesWithBasePath(string path)
+        {
+            return _mediaFileRepository.GetUnmappedFilesWithBasePath(path);
         }
 
         public void UpdateMediaInfo(List<TrackFile> trackFiles)

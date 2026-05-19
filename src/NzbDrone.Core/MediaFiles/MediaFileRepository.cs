@@ -14,6 +14,7 @@ namespace NzbDrone.Core.MediaFiles
         List<TrackFile> GetFilesByAlbum(int albumId);
         List<TrackFile> GetFilesByRelease(int releaseId);
         List<TrackFile> GetUnmappedFiles();
+        List<TrackFile> GetUnmappedFilesWithBasePath(string path);
         List<TrackFile> GetFilesWithBasePath(string path);
         List<TrackFile> GetFileWithPath(List<string> paths);
         TrackFile GetFileWithPath(string path);
@@ -91,6 +92,20 @@ namespace NzbDrone.Core.MediaFiles
 #pragma warning disable CS0472
             return _database.Query<TrackFile>(new SqlBuilder(_database.DatabaseType).Select(typeof(TrackFile))
                                               .LeftJoin<TrackFile, Track>((f, t) => f.Id == t.TrackFileId)
+                                              .Where<Track>(t => t.Id == null)).ToList();
+#pragma warning restore CS0472
+        }
+
+        public List<TrackFile> GetUnmappedFilesWithBasePath(string path)
+        {
+            var safePath = path.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+            // x.Id == null is converted to SQL, so warning incorrect
+#pragma warning disable CS0472
+            return _database.Query<TrackFile>(new SqlBuilder(_database.DatabaseType)
+                                              .Select(typeof(TrackFile))
+                                              .LeftJoin<TrackFile, Track>((f, t) => f.Id == t.TrackFileId)
+                                              .Where<TrackFile>(f => f.Path.StartsWith(safePath))
                                               .Where<Track>(t => t.Id == null)).ToList();
 #pragma warning restore CS0472
         }

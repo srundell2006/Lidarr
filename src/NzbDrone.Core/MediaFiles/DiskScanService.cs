@@ -45,6 +45,7 @@ namespace NzbDrone.Core.MediaFiles
         private readonly IArtistService _artistService;
         private readonly IMediaFileTableCleanupService _mediaFileTableCleanupService;
         private readonly IRootFolderService _rootFolderService;
+        private readonly IRecycleBinProvider _recycleBinProvider;
         private readonly IEventAggregator _eventAggregator;
         private readonly Logger _logger;
 
@@ -56,6 +57,7 @@ namespace NzbDrone.Core.MediaFiles
                                IArtistService artistService,
                                IRootFolderService rootFolderService,
                                IMediaFileTableCleanupService mediaFileTableCleanupService,
+                               IRecycleBinProvider recycleBinProvider,
                                IEventAggregator eventAggregator,
                                Logger logger)
         {
@@ -67,6 +69,7 @@ namespace NzbDrone.Core.MediaFiles
             _artistService = artistService;
             _mediaFileTableCleanupService = mediaFileTableCleanupService;
             _rootFolderService = rootFolderService;
+            _recycleBinProvider = recycleBinProvider;
             _eventAggregator = eventAggregator;
             _logger = logger;
         }
@@ -240,6 +243,16 @@ namespace NzbDrone.Core.MediaFiles
 
             _logger.Debug($"Updated info for {updatedFiles.Count} known files");
 
+            // When scanning specific artist folders, recycle any track files that still have no
+            // track association after this scan cycle.  These are files Lidarr cannot match to
+            // anything in its database, so keeping them in the library folder is misleading.
+            // Skip this for whole-library rescans (artistIds empty) to avoid mass-recycling on
+            // the first run after onboarding.
+            if (artistIds != null && artistIds.Any())
+            {
+                RecycleUnmappedFiles(folders);
+            }
+
             foreach (var artist in artists)
             {
                 CompletedScanning(artist);
@@ -253,6 +266,35 @@ namespace NzbDrone.Core.MediaFiles
         {
             _logger.Debug($"Cleaning up media files in DB [{folder}]");
             _mediaFileTableCleanupService.Clean(folder, mediaFileList);
+        }
+
+        private void RecycleUnmappedFiles(List<string> folders)
+        {
+            foreach (var folder in folders)
+            {
+                var unmapped = _mediaFileService.GetUnmappedFilesWithBasePath(folder);
+
+                if (!unmapped.Any())
+                {
+                    continue;
+                }
+
+                _logger.Info("Found {0} unmapped track file(s) in {1} — moving to recycle bin", unmapped.Count, folder);
+
+                foreach (var trackFile in unmapped)
+                {
+                    try
+                    {
+                        _logger.Debug("Recycling unmapped track file: {0}", trackFile.Path);
+                        _recycleBinProvider.DeleteFile(trackFile.Path);
+                        _mediaFileService.Delete(trackFile, DeleteMediaFileReason.MissingFromDisk);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Warn(ex, "Failed to recycle unmapped track file: {0}", trackFile.Path);
+                    }
+                }
+            }
         }
 
         private void CompletedScanning(Artist artist)
