@@ -116,7 +116,7 @@ namespace NzbDrone.Core.Jobs
 
                     new ScheduledTask
                     {
-                        Interval = 5,
+                        Interval = 6 * 60,
                         TypeName = typeof(ImportListSyncCommand).FullName
                     },
 
