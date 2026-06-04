@@ -86,69 +86,10 @@ namespace NzbDrone.Core.MediaFiles
                 artistIds = new List<int>();
             }
 
-            var mediaFileList = new List<IFileInfo>();
-
-            var musicFilesStopwatch = Stopwatch.StartNew();
-
-            foreach (var folder in folders)
-            {
-                // We could be scanning a root folder or a subset of a root folder.  If it's a subset,
-                // check if the root folder exists before cleaning.
-                var rootFolder = _rootFolderService.GetBestRootFolder(folder);
-
-                if (rootFolder == null)
-                {
-                    _logger.Error("Not scanning {0}, it's not a subdirectory of a defined root folder", folder);
-                    return;
-                }
-
-                var folderExists = _diskProvider.FolderExists(folder);
-
-                if (!folderExists)
-                {
-                    if (!_diskProvider.FolderExists(rootFolder.Path))
-                    {
-                        _logger.Warn("Artists' root folder ({0}) doesn't exist.", rootFolder.Path);
-                        var skippedArtists = _artistService.GetArtists(artistIds);
-                        skippedArtists.ForEach(x => _eventAggregator.PublishEvent(new ArtistScanSkippedEvent(x, ArtistScanSkippedReason.RootFolderDoesNotExist)));
-                        return;
-                    }
-
-                    if (_diskProvider.FolderEmpty(rootFolder.Path))
-                    {
-                        _logger.Warn("Artists' root folder ({0}) is empty.", rootFolder.Path);
-                        var skippedArtists = _artistService.GetArtists(artistIds);
-                        skippedArtists.ForEach(x => _eventAggregator.PublishEvent(new ArtistScanSkippedEvent(x, ArtistScanSkippedReason.RootFolderIsEmpty)));
-                        return;
-                    }
-                }
-
-                if (!folderExists)
-                {
-                    _logger.Debug("Specified scan folder ({0}) doesn't exist.", folder);
-
-                    CleanMediaFiles(folder, new List<string>());
-                    continue;
-                }
-
-                _logger.ProgressInfo("Scanning {0}", folder);
-
-                var files = FilterFiles(folder, GetAudioFiles(folder));
-
-                if (!files.Any())
-                {
-                    _logger.Warn("Scan folder {0} is empty.", folder);
-                    continue;
-                }
-
-                CleanMediaFiles(folder, files.Select(x => x.FullName).ToList());
-                mediaFileList.AddRange(files);
-            }
-
             var artists = _artistService.GetArtists(artistIds);
 
-            // Check for missing artist folders if specific artists are being scanned
-            if (artistIds != null && artistIds.Any())
+            // Create missing artist folders when scanning specific artists
+            if (artistIds.Any())
             {
                 foreach (var artist in artists)
                 {
@@ -174,11 +115,6 @@ namespace NzbDrone.Core.MediaFiles
                 }
             }
 
-            musicFilesStopwatch.Stop();
-            _logger.Trace("Finished getting track files for:\n{0} [{1}]", folders.ConcatToString("\n"), musicFilesStopwatch.Elapsed);
-
-            var decisionsStopwatch = Stopwatch.StartNew();
-
             var config = new ImportDecisionMakerConfig
             {
                 Filter = filter,
@@ -186,19 +122,129 @@ namespace NzbDrone.Core.MediaFiles
                 AddNewArtists = addNewArtists
             };
 
-            var decisions = _importDecisionMaker.GetImportDecisions(mediaFileList, null, null, config);
+            // Resolve input folders to artist-level scan units.  When a root folder is given
+            // (e.g. the daily Rescan Folders task), expand it into its immediate subdirectories
+            // so that identification runs one artist folder at a time instead of accumulating
+            // the entire library (100k+ files) into a single batch before any work begins.
+            // Artist-level folders passed directly (e.g. from RefreshArtistService) are used as-is.
+            var rootFolderPaths = _rootFolderService.All()
+                .Select(x => x.Path.TrimEnd('/', '\\'))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+            var scanUnits = new List<string>();
+
+            foreach (var folder in folders)
+            {
+                var normalizedFolder = folder.TrimEnd('/', '\\');
+
+                if (rootFolderPaths.Contains(normalizedFolder))
+                {
+                    // Root folder — validate existence, then expand to immediate subdirectories.
+                    // Files sitting directly under the root (not in an artist subfolder) are
+                    // intentionally skipped; Lidarr expects an artist/album/track hierarchy.
+                    if (!_diskProvider.FolderExists(folder))
+                    {
+                        _logger.Warn("Artists' root folder ({0}) doesn't exist.", folder);
+                        artists.ForEach(x => _eventAggregator.PublishEvent(new ArtistScanSkippedEvent(x, ArtistScanSkippedReason.RootFolderDoesNotExist)));
+                        continue;
+                    }
+
+                    if (_diskProvider.FolderEmpty(folder))
+                    {
+                        _logger.Warn("Artists' root folder ({0}) is empty.", folder);
+                        artists.ForEach(x => _eventAggregator.PublishEvent(new ArtistScanSkippedEvent(x, ArtistScanSkippedReason.RootFolderIsEmpty)));
+                        continue;
+                    }
+
+                    // Reuse existing path filtering to skip @eadir, .@__thumb, hidden dirs, etc.
+                    var subDirs = FilterPaths(folder, _diskProvider.GetDirectories(folder))
+                        .OrderBy(d => d)
+                        .ToList();
+
+                    _logger.Debug("Expanding root folder {0} into {1} artist subdirectories", folder, subDirs.Count);
+                    scanUnits.AddRange(subDirs);
+                }
+                else
+                {
+                    // Already an artist-level folder (e.g. from RefreshArtistService)
+                    scanUnits.Add(folder);
+                }
+            }
+
+            _logger.ProgressInfo("Scanning {0} folders", scanUnits.Count);
+
+            var totalStopwatch = Stopwatch.StartNew();
+
+            foreach (var folder in scanUnits)
+            {
+                ScanFolder(folder, config);
+            }
+
+            totalStopwatch.Stop();
+            _logger.Debug("Scan complete for {0} folders [{1}]", scanUnits.Count, totalStopwatch.Elapsed);
+
+            // When scanning specific artist folders, recycle any track files that still have no
+            // track association after this scan cycle.  These are files Lidarr cannot match to
+            // anything in its database, so keeping them in the library folder is misleading.
+            // Skip this for whole-library rescans (artistIds empty) to avoid mass-recycling on
+            // the first run after onboarding.
+            if (artistIds.Any())
+            {
+                RecycleUnmappedFiles(scanUnits);
+            }
+
+            foreach (var artist in artists)
+            {
+                CompletedScanning(artist);
+            }
+        }
+
+        /// <summary>
+        /// Runs the full scan pipeline (enumerate → clean DB → identify → import → insert/update)
+        /// for a single artist-level folder.  Keeping this isolated means the maximum number of
+        /// files held in memory at once is bounded by one artist's catalogue rather than the
+        /// whole library.
+        /// </summary>
+        private void ScanFolder(string folder, ImportDecisionMakerConfig config)
+        {
+            var rootFolder = _rootFolderService.GetBestRootFolder(folder);
+
+            if (rootFolder == null)
+            {
+                _logger.Error("Not scanning {0}, it's not a subdirectory of a defined root folder", folder);
+                return;
+            }
+
+            if (!_diskProvider.FolderExists(folder))
+            {
+                _logger.Debug("Specified scan folder ({0}) doesn't exist.", folder);
+                CleanMediaFiles(folder, new List<string>());
+                return;
+            }
+
+            _logger.ProgressInfo("Scanning {0}", folder);
+
+            var files = FilterFiles(folder, GetAudioFiles(folder));
+
+            if (!files.Any())
+            {
+                _logger.Warn("Scan folder {0} is empty.", folder);
+                return;
+            }
+
+            CleanMediaFiles(folder, files.Select(x => x.FullName).ToList());
+
+            var decisionsStopwatch = Stopwatch.StartNew();
+            var decisions = _importDecisionMaker.GetImportDecisions(files, null, null, config);
             decisionsStopwatch.Stop();
-            _logger.Debug("Import decisions complete [{0}]", decisionsStopwatch.Elapsed);
+            _logger.Trace("Import decisions for {0} [{1}]", folder, decisionsStopwatch.Elapsed);
 
-            var importStopwatch = Stopwatch.StartNew();
             _importApprovedTracks.Import(decisions, false);
 
-            // decisions may have been filtered to just new files.  Anything new and approved will have been inserted.
-            // Now we need to make sure anything new but not approved gets inserted
-            // Note that knownFiles will include anything imported just now
-            var knownFiles = new List<TrackFile>();
-            folders.ForEach(x => knownFiles.AddRange(_mediaFileService.GetFilesWithBasePath(x)));
+            // decisions may have been filtered to just new files.  Anything new and approved will
+            // have been inserted.  Now make sure anything new but not approved gets inserted too.
+            // Note that knownFiles will include anything imported just now.
+            var knownFiles = _mediaFileService.GetFilesWithBasePath(folder);
 
             var newFiles = decisions
                 .ExceptBy(x => x.Item.Path, knownFiles, x => x.Path, PathEqualityComparer.Instance)
@@ -214,9 +260,12 @@ namespace NzbDrone.Core.MediaFiles
                 .ToList();
             _mediaFileService.AddMany(newFiles);
 
-            _logger.Debug($"Inserted {newFiles.Count} new unmatched trackfiles");
+            if (newFiles.Count > 0)
+            {
+                _logger.Debug($"Inserted {newFiles.Count} new unmatched trackfiles in {folder}");
+            }
 
-            // finally update info on size/modified for existing files
+            // Update size/mtime for known files that have changed on disk
             var updatedFiles = knownFiles
                 .Join(decisions,
                       x => x.Path,
@@ -241,25 +290,10 @@ namespace NzbDrone.Core.MediaFiles
 
             _mediaFileService.Update(updatedFiles);
 
-            _logger.Debug($"Updated info for {updatedFiles.Count} known files");
-
-            // When scanning specific artist folders, recycle any track files that still have no
-            // track association after this scan cycle.  These are files Lidarr cannot match to
-            // anything in its database, so keeping them in the library folder is misleading.
-            // Skip this for whole-library rescans (artistIds empty) to avoid mass-recycling on
-            // the first run after onboarding.
-            if (artistIds != null && artistIds.Any())
+            if (updatedFiles.Count > 0)
             {
-                RecycleUnmappedFiles(folders);
+                _logger.Debug($"Updated info for {updatedFiles.Count} known files in {folder}");
             }
-
-            foreach (var artist in artists)
-            {
-                CompletedScanning(artist);
-            }
-
-            importStopwatch.Stop();
-            _logger.Debug("Track import complete for:\n{0} [{1}]", folders.ConcatToString("\n"), importStopwatch.Elapsed);
         }
 
         private void CleanMediaFiles(string folder, List<string> mediaFileList)
