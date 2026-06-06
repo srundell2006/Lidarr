@@ -177,7 +177,16 @@ namespace NzbDrone.Core.MediaFiles
 
             foreach (var folder in scanUnits)
             {
-                ScanFolder(folder, config);
+                try
+                {
+                    ScanFolder(folder, config);
+                }
+                catch (Exception ex)
+                {
+                    // Log and continue — one bad artist folder must not abort the entire library scan.
+                    // The folder will be retried on the next scheduled run.
+                    _logger.Error(ex, "Error scanning folder {0} — skipping and continuing", folder);
+                }
             }
 
             totalStopwatch.Stop();
@@ -228,7 +237,7 @@ namespace NzbDrone.Core.MediaFiles
 
             if (!files.Any())
             {
-                _logger.Warn("Scan folder {0} is empty.", folder);
+                _logger.Debug("Scan folder {0} has no audio files.", folder);
                 return;
             }
 
