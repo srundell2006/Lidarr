@@ -98,7 +98,7 @@ namespace NzbDrone.Core.Jobs
 
                     new ScheduledTask
                     {
-                        Interval = 24 * 60,
+                        Interval = 14 * 24 * 60,
                         TypeName = typeof(RescanFoldersCommand).FullName
                     },
 
