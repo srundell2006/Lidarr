@@ -50,8 +50,13 @@ const selectAppProps = createSelector(
   }
 );
 
+// NOTE: artist.isPopulated is intentionally excluded from this gate.
+// The artist list can be very large and takes significantly longer to load
+// than all other resources. ArtistIndex handles its own loading indicator
+// (isFetching && !isPopulated → <LoadingIndicator />) so the app shell,
+// navigation, and settings pages can all be used immediately while the
+// artist list continues loading in the background.
 const selectIsPopulated = createSelector(
-  (state) => state.artist.isPopulated,
   (state) => state.customFilters.isPopulated,
   (state) => state.tags.isPopulated,
   (state) => state.settings.ui.isPopulated,
@@ -63,7 +68,6 @@ const selectIsPopulated = createSelector(
   (state) => state.system.status.isPopulated,
   (state) => state.app.translations.isPopulated,
   (
-    artistsIsPopulated,
     customFiltersIsPopulated,
     tagsIsPopulated,
     uiSettingsIsPopulated,
@@ -76,7 +80,6 @@ const selectIsPopulated = createSelector(
     translationsIsPopulated
   ) => {
     return (
-      artistsIsPopulated &&
       customFiltersIsPopulated &&
       tagsIsPopulated &&
       uiSettingsIsPopulated &&
@@ -91,8 +94,10 @@ const selectIsPopulated = createSelector(
   }
 );
 
+// NOTE: state.artist.error is intentionally excluded — ArtistIndex displays
+// artist fetch errors inline so a transient API failure doesn't blank the
+// entire app with the global ErrorPage.
 const selectErrors = createSelector(
-  (state) => state.artist.error,
   (state) => state.customFilters.error,
   (state) => state.tags.error,
   (state) => state.settings.ui.error,
@@ -104,7 +109,6 @@ const selectErrors = createSelector(
   (state) => state.system.status.error,
   (state) => state.app.translations.error,
   (
-    artistsError,
     customFiltersError,
     tagsError,
     uiSettingsError,
@@ -117,7 +121,6 @@ const selectErrors = createSelector(
     translationsError
   ) => {
     const hasError = !!(
-      artistsError ||
       customFiltersError ||
       tagsError ||
       uiSettingsError ||

@@ -33,10 +33,10 @@ namespace Lidarr.Api.V1.Artist
         public List<Links> Links { get; set; }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-        public AlbumResource NextAlbum { get; set; }
+        public AlbumSummaryResource NextAlbum { get; set; }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
-        public AlbumResource LastAlbum { get; set; }
+        public AlbumSummaryResource LastAlbum { get; set; }
 
         public List<MediaCover> Images { get; set; }
         public List<Member> Members { get; set; }

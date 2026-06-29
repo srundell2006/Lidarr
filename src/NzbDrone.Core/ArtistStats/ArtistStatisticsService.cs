@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using NzbDrone.Common.Cache;
@@ -26,6 +27,15 @@ namespace NzbDrone.Core.ArtistStats
         IHandle<AlbumUpdatedEvent>,
         IHandle<TrackFileDeletedEvent>
     {
+        // Minimum interval between full-library cache busts. Rapid events (e.g. bulk
+        // imports) fire AlbumImportedEvent for every track file, which previously caused
+        // a cold-cache heavy aggregation query on every subsequent page load. Throttling
+        // to once per 60 seconds means at most one expensive query per minute instead of
+        // one per imported file, with at most 60 seconds of stale statistics shown.
+        private const int AllArtistsCacheThrottleSeconds = 60;
+        private readonly object _allArtistsCacheLock = new object();
+        private DateTime _allArtistsNextInvalidationTime = DateTime.MinValue;
+
         private readonly IArtistStatisticsRepository _artistStatisticsRepository;
         private readonly ICached<List<AlbumStatistics>> _cache;
 
@@ -34,6 +44,24 @@ namespace NzbDrone.Core.ArtistStats
         {
             _artistStatisticsRepository = artistStatisticsRepository;
             _cache = cacheManager.GetCache<List<AlbumStatistics>>(GetType());
+        }
+
+        /// <summary>
+        /// Invalidates the full-library statistics cache, subject to a throttle so that
+        /// rapid bursts of events (e.g. bulk imports) only cause one cache bust per
+        /// <see cref="AllArtistsCacheThrottleSeconds"/> seconds.
+        /// </summary>
+        private void InvalidateAllArtistsCache()
+        {
+            lock (_allArtistsCacheLock)
+            {
+                var now = DateTime.UtcNow;
+                if (now >= _allArtistsNextInvalidationTime)
+                {
+                    _cache.Remove("AllArtists");
+                    _allArtistsNextInvalidationTime = now.AddSeconds(AllArtistsCacheThrottleSeconds);
+                }
+            }
         }
 
         public List<ArtistStatistics> ArtistStatistics()
@@ -74,28 +102,28 @@ namespace NzbDrone.Core.ArtistStats
         [EventHandleOrder(EventHandleOrder.First)]
         public void Handle(ArtistAddedEvent message)
         {
-            _cache.Remove("AllArtists");
+            InvalidateAllArtistsCache();
             _cache.Remove(message.Artist.Id.ToString());
         }
 
         [EventHandleOrder(EventHandleOrder.First)]
         public void Handle(ArtistEditedEvent message)
         {
-            _cache.Remove("AllArtists");
+            InvalidateAllArtistsCache();
             _cache.Remove(message.Artist.Id.ToString());
         }
 
         [EventHandleOrder(EventHandleOrder.First)]
         public void Handle(ArtistUpdatedEvent message)
         {
-            _cache.Remove("AllArtists");
+            InvalidateAllArtistsCache();
             _cache.Remove(message.Artist.Id.ToString());
         }
 
         [EventHandleOrder(EventHandleOrder.First)]
         public void Handle(ArtistsDeletedEvent message)
         {
-            _cache.Remove("AllArtists");
+            InvalidateAllArtistsCache();
 
             foreach (var artist in message.Artists)
             {
@@ -106,42 +134,42 @@ namespace NzbDrone.Core.ArtistStats
         [EventHandleOrder(EventHandleOrder.First)]
         public void Handle(AlbumAddedEvent message)
         {
-            _cache.Remove("AllArtists");
+            InvalidateAllArtistsCache();
             _cache.Remove(message.Album.ArtistId.ToString());
         }
 
         [EventHandleOrder(EventHandleOrder.First)]
         public void Handle(AlbumDeletedEvent message)
         {
-            _cache.Remove("AllArtists");
+            InvalidateAllArtistsCache();
             _cache.Remove(message.Album.ArtistId.ToString());
         }
 
         [EventHandleOrder(EventHandleOrder.First)]
         public void Handle(AlbumImportedEvent message)
         {
-            _cache.Remove("AllArtists");
+            InvalidateAllArtistsCache();
             _cache.Remove(message.Artist.Id.ToString());
         }
 
         [EventHandleOrder(EventHandleOrder.First)]
         public void Handle(AlbumEditedEvent message)
         {
-            _cache.Remove("AllArtists");
+            InvalidateAllArtistsCache();
             _cache.Remove(message.Album.ArtistId.ToString());
         }
 
         [EventHandleOrder(EventHandleOrder.First)]
         public void Handle(AlbumUpdatedEvent message)
         {
-            _cache.Remove("AllArtists");
+            InvalidateAllArtistsCache();
             _cache.Remove(message.Album.ArtistId.ToString());
         }
 
         [EventHandleOrder(EventHandleOrder.First)]
         public void Handle(TrackFileDeletedEvent message)
         {
-            _cache.Remove("AllArtists");
+            InvalidateAllArtistsCache();
             _cache.Remove(message.TrackFile.Artist.Value.Id.ToString());
         }
     }
