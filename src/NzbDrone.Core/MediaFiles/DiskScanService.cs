@@ -32,7 +32,8 @@ namespace NzbDrone.Core.MediaFiles
 
     public class DiskScanService :
         IDiskScanService,
-        IExecute<RescanFoldersCommand>
+        IExecute<RescanFoldersCommand>,
+        IExecute<ScanAlbumCommand>
     {
         public static readonly Regex ExcludedSubFoldersRegex = new Regex(@"(?:\\|\/|^)(?:extras|@eadir|\.@__thumb|extrafanart|plex versions|\.[^\\/]+)(?:\\|\/)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         public static readonly Regex ExcludedFilesRegex = new Regex(@"^\._|^Thumbs\.db$|^\.DS_store$|\.partial~$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -43,6 +44,7 @@ namespace NzbDrone.Core.MediaFiles
         private readonly IMakeImportDecision _importDecisionMaker;
         private readonly IImportApprovedTracks _importApprovedTracks;
         private readonly IArtistService _artistService;
+        private readonly IAlbumService _albumService;
         private readonly IMediaFileTableCleanupService _mediaFileTableCleanupService;
         private readonly IRootFolderService _rootFolderService;
         private readonly IRecycleBinProvider _recycleBinProvider;
@@ -55,6 +57,7 @@ namespace NzbDrone.Core.MediaFiles
                                IMakeImportDecision importDecisionMaker,
                                IImportApprovedTracks importApprovedTracks,
                                IArtistService artistService,
+                               IAlbumService albumService,
                                IRootFolderService rootFolderService,
                                IMediaFileTableCleanupService mediaFileTableCleanupService,
                                IRecycleBinProvider recycleBinProvider,
@@ -67,6 +70,7 @@ namespace NzbDrone.Core.MediaFiles
             _importDecisionMaker = importDecisionMaker;
             _importApprovedTracks = importApprovedTracks;
             _artistService = artistService;
+            _albumService = albumService;
             _mediaFileTableCleanupService = mediaFileTableCleanupService;
             _rootFolderService = rootFolderService;
             _recycleBinProvider = recycleBinProvider;
@@ -507,6 +511,90 @@ namespace NzbDrone.Core.MediaFiles
         public void Execute(RescanFoldersCommand message)
         {
             Scan(message.Folders, message.Filter, message.AddNewArtists, message.ArtistIds);
+        }
+
+        public void Execute(ScanAlbumCommand message)
+        {
+            var album = _albumService.GetAlbum(message.AlbumId);
+            var artist = _artistService.GetArtistByMetadataId(album.ArtistMetadataId);
+
+            // Determine the folder to scan. Use the common parent of any already-known track
+            // files for this album (handles multi-disc albums stored in subdirectories).
+            // If no files are on disk yet, fall back to the artist folder so we can discover
+            // newly-added files regardless of how the user named the album subfolder.
+            var existingFiles = _mediaFileService.GetFilesByAlbum(message.AlbumId);
+            string scanFolder;
+
+            if (existingFiles.Any())
+            {
+                scanFolder = GetCommonDirectory(existingFiles.Select(f => f.Path));
+                _logger.Debug("Album {0} has {1} known file(s); scanning common folder {2}", album.Title, existingFiles.Count, scanFolder);
+            }
+            else
+            {
+                scanFolder = artist.Path;
+                _logger.Debug("Album {0} has no known files; falling back to artist folder {1}", album.Title, scanFolder);
+            }
+
+            var config = new ImportDecisionMakerConfig
+            {
+                Filter = FilterFilesType.None,
+                IncludeExisting = true,
+                AddNewArtists = false
+            };
+
+            try
+            {
+                ScanFolder(scanFolder, config);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Error scanning album folder {0}", scanFolder);
+            }
+        }
+
+        /// <summary>
+        /// Returns the deepest common ancestor directory of a set of file paths.
+        /// For a single-disc album all files share one directory; for multi-disc albums
+        /// the common parent is the album root (e.g. Artist/Album rather than Artist/Album/CD1).
+        /// </summary>
+        private static string GetCommonDirectory(IEnumerable<string> filePaths)
+        {
+            var dirs = filePaths
+                .Select(p => Path.GetDirectoryName(p) ?? string.Empty)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (dirs.Count == 1)
+            {
+                return dirs[0];
+            }
+
+            // Split each directory into path segments and find the longest common prefix.
+            var sep = Path.DirectorySeparatorChar;
+            var segments = dirs
+                .Select(d => d.Split(sep))
+                .ToList();
+
+            var shortestLength = segments.Min(s => s.Length);
+            var commonParts = new List<string>();
+
+            for (var i = 0; i < shortestLength; i++)
+            {
+                var part = segments[0][i];
+                if (segments.All(s => s[i].Equals(part, StringComparison.OrdinalIgnoreCase)))
+                {
+                    commonParts.Add(part);
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            return commonParts.Count > 0
+                ? string.Join(sep.ToString(), commonParts)
+                : dirs[0];
         }
     }
 }

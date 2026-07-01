@@ -26,10 +26,19 @@ function createMapStateToProps() {
         );
       });
 
+      const isScanning = commands.some((command) => {
+        return (
+          command.name === commandNames.SCAN_ALBUM &&
+          isCommandExecuting(command) &&
+          command.body.albumId === albumId
+        );
+      });
+
       return {
         artistMonitored: artist.monitored,
         artistType: artist.artistType,
-        isSearching
+        isSearching,
+        isScanning
       };
     }
   );
@@ -37,10 +46,16 @@ function createMapStateToProps() {
 
 function createMapDispatchToProps(dispatch, props) {
   return {
-    onSearchPress(name, path) {
+    onSearchPress() {
       dispatch(executeCommand({
         name: commandNames.ALBUM_SEARCH,
         albumIds: [props.albumId]
+      }));
+    },
+    onScanPress() {
+      dispatch(executeCommand({
+        name: commandNames.SCAN_ALBUM,
+        albumId: props.albumId
       }));
     }
   };

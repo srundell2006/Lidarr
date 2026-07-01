@@ -40,7 +40,9 @@ class AlbumSearchCell extends Component {
       albumId,
       albumTitle,
       isSearching,
+      isScanning,
       onSearchPress,
+      onScanPress,
       ...otherProps
     } = this.props;
 
@@ -57,6 +59,13 @@ class AlbumSearchCell extends Component {
           name={icons.INTERACTIVE}
           onPress={this.onManualSearchPress}
           title={translate('InteractiveSearch')}
+        />
+
+        <SpinnerIconButton
+          name={icons.RESCAN}
+          isSpinning={isScanning}
+          onPress={onScanPress}
+          title={translate('ScanAlbumFiles')}
         />
 
         <AlbumInteractiveSearchModalConnector
@@ -77,7 +86,9 @@ AlbumSearchCell.propTypes = {
   artistId: PropTypes.number.isRequired,
   albumTitle: PropTypes.string.isRequired,
   isSearching: PropTypes.bool.isRequired,
-  onSearchPress: PropTypes.func.isRequired
+  isScanning: PropTypes.bool.isRequired,
+  onSearchPress: PropTypes.func.isRequired,
+  onScanPress: PropTypes.func.isRequired
 };
 
 export default AlbumSearchCell;

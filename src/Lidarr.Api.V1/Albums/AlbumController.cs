@@ -11,7 +11,9 @@ using NzbDrone.Core.DecisionEngine.Specifications;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.MediaCover;
 using NzbDrone.Core.MediaFiles;
+using NzbDrone.Core.MediaFiles.Commands;
 using NzbDrone.Core.MediaFiles.Events;
+using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Music;
 using NzbDrone.Core.Music.Events;
@@ -33,6 +35,7 @@ namespace Lidarr.Api.V1.Albums
         protected readonly IArtistService _artistService;
         protected readonly IReleaseService _releaseService;
         protected readonly IAddAlbumService _addAlbumService;
+        private readonly IManageCommandQueue _commandQueueManager;
 
         public AlbumController(IArtistService artistService,
                            IAlbumService albumService,
@@ -42,6 +45,7 @@ namespace Lidarr.Api.V1.Albums
                            IMapCoversToLocal coverMapper,
                            IUpgradableSpecification upgradableSpecification,
                            IBroadcastSignalRMessage signalRBroadcaster,
+                           IManageCommandQueue commandQueueManager,
                            RootFolderValidator rootFolderValidator,
                            MappedNetworkDriveValidator mappedNetworkDriveValidator,
                            ArtistAncestorValidator artistAncestorValidator,
@@ -57,6 +61,7 @@ namespace Lidarr.Api.V1.Albums
             _artistService = artistService;
             _releaseService = releaseService;
             _addAlbumService = addAlbumService;
+            _commandQueueManager = commandQueueManager;
 
             PostValidator.RuleFor(s => s.ForeignAlbumId).NotEmpty().SetValidator(albumExistsValidator);
             PostValidator.RuleFor(s => s.Artist).NotNull();
@@ -176,6 +181,18 @@ namespace Lidarr.Api.V1.Albums
             _albumService.SetMonitored(resource.AlbumIds, resource.Monitored);
 
             return Accepted(MapToResource(_albumService.GetAlbums(resource.AlbumIds), false));
+        }
+
+        /// <summary>
+        /// Triggers a targeted disk scan for a single album.  Only the album's own
+        /// folder (derived from existing track files) is scanned rather than the
+        /// entire artist folder, keeping the operation fast.
+        /// </summary>
+        [HttpPost("{id}/scan")]
+        public IActionResult ScanAlbum(int id)
+        {
+            _commandQueueManager.Push(new ScanAlbumCommand(id), trigger: CommandTrigger.Manual);
+            return Accepted();
         }
 
         [NonAction]
