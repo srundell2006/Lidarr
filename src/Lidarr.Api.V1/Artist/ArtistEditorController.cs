@@ -126,8 +126,8 @@ namespace Lidarr.Api.V1.Artist
 
             foreach (var artistResource in artists)
             {
-                artistResource.NextAlbum = nextAlbums.FirstOrDefault(x => x.ArtistMetadataId == artistResource.ArtistMetadataId).ToResource();
-                artistResource.LastAlbum = lastAlbums.FirstOrDefault(x => x.ArtistMetadataId == artistResource.ArtistMetadataId).ToResource();
+                artistResource.NextAlbum = nextAlbums.FirstOrDefault(x => x.ArtistMetadataId == artistResource.ArtistMetadataId).ToSummaryResource();
+                artistResource.LastAlbum = lastAlbums.FirstOrDefault(x => x.ArtistMetadataId == artistResource.ArtistMetadataId).ToSummaryResource();
             }
         }
     }
