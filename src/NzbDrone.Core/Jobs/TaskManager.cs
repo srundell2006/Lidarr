@@ -137,6 +137,13 @@ namespace NzbDrone.Core.Jobs
                         // Interval = 0 means never run automatically — manual trigger only
                         Interval = 0,
                         TypeName = typeof(RebuildArtistCommand).FullName
+                    },
+
+                    new ScheduledTask
+                    {
+                        // Interval = 0 means never run automatically — manual trigger only
+                        Interval = 0,
+                        TypeName = typeof(UnmonitorSinglesCommand).FullName
                     }
                 };
 

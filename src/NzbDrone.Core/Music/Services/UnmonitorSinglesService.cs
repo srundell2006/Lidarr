@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using NLog;
@@ -8,21 +9,27 @@ using NzbDrone.Core.Music.Commands;
 namespace NzbDrone.Core.Music.Services
 {
     /// <summary>
-    /// Unmonitors singles for an artist whose tracks are already present in a full album
-    /// by matching on MusicBrainz ForeignRecordingId.  Only monitored singles are
-    /// considered; a single is unmonitored only when every one of its tracks appears
-    /// in at least one full album track for the same artist.
+    /// Unmonitors singles whose tracks are already present in a full album,
+    /// matched by MusicBrainz ForeignRecordingId.
+    ///
+    /// When ArtistIds is empty (e.g. triggered from the System task list) the
+    /// check runs across every artist in the library.  When ArtistIds is
+    /// non-empty (e.g. triggered from the Artist detail page) only those
+    /// specific artists are processed.
     /// </summary>
     public class UnmonitorSinglesService : IExecute<UnmonitorSinglesCommand>
     {
+        private readonly IArtistService _artistService;
         private readonly IAlbumService _albumService;
         private readonly ITrackService _trackService;
         private readonly Logger _logger;
 
-        public UnmonitorSinglesService(IAlbumService albumService,
+        public UnmonitorSinglesService(IArtistService artistService,
+                                       IAlbumService albumService,
                                        ITrackService trackService,
                                        Logger logger)
         {
+            _artistService = artistService;
             _albumService = albumService;
             _trackService = trackService;
             _logger = logger;
@@ -30,7 +37,30 @@ namespace NzbDrone.Core.Music.Services
 
         public void Execute(UnmonitorSinglesCommand message)
         {
-            var allAlbums = _albumService.GetAlbumsByArtist(message.ArtistId);
+            List<Artist> artists;
+
+            if (message.ArtistIds.Any())
+            {
+                artists = _artistService.GetArtists(message.ArtistIds);
+            }
+            else
+            {
+                artists = _artistService.GetAllArtists();
+            }
+
+            _logger.ProgressInfo("Unmonitoring redundant singles for {0} artist(s)", artists.Count);
+
+            foreach (var artist in artists)
+            {
+                ProcessArtist(artist);
+            }
+
+            _logger.ProgressInfo("Finished unmonitoring redundant singles");
+        }
+
+        private void ProcessArtist(Artist artist)
+        {
+            var allAlbums = _albumService.GetAlbumsByArtist(artist.Id);
 
             // Monitored singles only — nothing to do if none exist
             var singles = allAlbums
@@ -39,7 +69,7 @@ namespace NzbDrone.Core.Music.Services
 
             if (!singles.Any())
             {
-                _logger.Debug("No monitored singles found for artist {0}", message.ArtistId);
+                _logger.Debug("No monitored singles found for artist {0}", artist.Name);
                 return;
             }
 
@@ -50,12 +80,12 @@ namespace NzbDrone.Core.Music.Services
 
             if (!fullAlbums.Any())
             {
-                _logger.Debug("No full albums found for artist {0}; nothing to unmonitor", message.ArtistId);
+                _logger.Debug("No full albums found for artist {0}; nothing to unmonitor", artist.Name);
                 return;
             }
 
             // Collect every ForeignRecordingId that appears on a full-album track
-            var fullAlbumRecordingIds = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+            var fullAlbumRecordingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var album in fullAlbums)
             {
                 var tracks = _trackService.GetTracksByAlbum(album.Id);
@@ -94,11 +124,11 @@ namespace NzbDrone.Core.Music.Services
             if (toUnmonitor.Any())
             {
                 _albumService.SetMonitored(toUnmonitor, false);
-                _logger.Info("Unmonitored {0} single(s) for artist {1} that are already present in full albums", toUnmonitor.Count, message.ArtistId);
+                _logger.Info("Unmonitored {0} single(s) for artist '{1}' that are already present in full albums", toUnmonitor.Count, artist.Name);
             }
             else
             {
-                _logger.Info("No redundant singles found for artist {0}", message.ArtistId);
+                _logger.Debug("No redundant singles found for artist '{0}'", artist.Name);
             }
         }
     }

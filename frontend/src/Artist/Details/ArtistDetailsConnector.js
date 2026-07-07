@@ -99,7 +99,11 @@ function createMapStateToProps() {
       const previousArtist = sortedArtist[artistIndex - 1] || _.last(sortedArtist);
       const nextArtist = sortedArtist[artistIndex + 1] || _.first(sortedArtist);
       const isRebuildingArtist = isCommandExecuting(findCommand(commands, { name: commandNames.REBUILD_ARTIST, artistId: artist.id }));
-      const isUnmonitoringSingles = isCommandExecuting(findCommand(commands, { name: commandNames.UNMONITOR_SINGLES, artistId: artist.id }));
+      const isUnmonitoringSingles = commands.some((command) =>
+        command.name === commandNames.UNMONITOR_SINGLES &&
+        isCommandExecuting(command) &&
+        command.body.artistIds.indexOf(artist.id) > -1
+      );
       const isArtistRefreshing = isCommandExecuting(findCommand(commands, { name: commandNames.REFRESH_ARTIST, artistId: artist.id }));
       const artistRefreshingCommand = findCommand(commands, { name: commandNames.REFRESH_ARTIST });
       const allArtistRefreshing = (
@@ -257,7 +261,7 @@ class ArtistDetailsConnector extends Component {
   onUnmonitorSinglesPress = () => {
     this.props.executeCommand({
       name: commandNames.UNMONITOR_SINGLES,
-      artistId: this.props.id
+      artistIds: [this.props.id]
     });
   };
 
