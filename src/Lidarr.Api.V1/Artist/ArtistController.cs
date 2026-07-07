@@ -205,7 +205,7 @@ namespace Lidarr.Api.V1.Artist
         [HttpPost("{id}/unmonitorsingles")]
         public IActionResult UnmonitorSingles(int id)
         {
-            _commandQueueManager.Push(new UnmonitorSinglesCommand(new System.Collections.Generic.List<int> { id }), trigger: CommandTrigger.Manual);
+            _commandQueueManager.Push(new UnmonitorSinglesCommand(new List<int> { id }), trigger: CommandTrigger.Manual);
             return Accepted();
         }
 
