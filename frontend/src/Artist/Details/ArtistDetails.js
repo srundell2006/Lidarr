@@ -203,6 +203,7 @@ class ArtistDetails extends Component {
       isRefreshing,
       isSearching,
       isRebuildingArtist,
+      isUnmonitoringSingles,
       isFetching,
       isPopulated,
       albumsError,
@@ -216,6 +217,7 @@ class ArtistDetails extends Component {
       onRefreshPress,
       onSearchPress,
       onRebuildDatabasePress,
+      onUnmonitorSinglesPress,
       artistType
     } = this.props;
 
@@ -333,6 +335,16 @@ class ArtistDetails extends Component {
               title="Rescan disk and rename all files to match naming convention"
               isSpinning={isRebuildingArtist}
               onPress={onRebuildDatabasePress}
+            />
+
+            <PageToolbarButton
+              label={translate('UnmonitorSingles')}
+              iconName={icons.UNMONITORED}
+              spinningName={icons.UNMONITORED}
+              title={translate('UnmonitorSinglesHint')}
+              isDisabled={!hasAlbums}
+              isSpinning={isUnmonitoringSingles}
+              onPress={onUnmonitorSinglesPress}
             />
 
             <PageToolbarSeparator />
@@ -746,6 +758,7 @@ ArtistDetails.propTypes = {
   isRefreshing: PropTypes.bool.isRequired,
   isSearching: PropTypes.bool.isRequired,
   isRebuildingArtist: PropTypes.bool.isRequired,
+  isUnmonitoringSingles: PropTypes.bool.isRequired,
   isFetching: PropTypes.bool.isRequired,
   isPopulated: PropTypes.bool.isRequired,
   albumsError: PropTypes.object,
@@ -758,7 +771,8 @@ ArtistDetails.propTypes = {
   onMonitorTogglePress: PropTypes.func.isRequired,
   onRefreshPress: PropTypes.func.isRequired,
   onSearchPress: PropTypes.func.isRequired,
-  onRebuildDatabasePress: PropTypes.func.isRequired
+  onRebuildDatabasePress: PropTypes.func.isRequired,
+  onUnmonitorSinglesPress: PropTypes.func.isRequired
 };
 
 ArtistDetails.defaultProps = {

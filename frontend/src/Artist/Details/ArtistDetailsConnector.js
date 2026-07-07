@@ -99,6 +99,7 @@ function createMapStateToProps() {
       const previousArtist = sortedArtist[artistIndex - 1] || _.last(sortedArtist);
       const nextArtist = sortedArtist[artistIndex + 1] || _.first(sortedArtist);
       const isRebuildingArtist = isCommandExecuting(findCommand(commands, { name: commandNames.REBUILD_ARTIST, artistId: artist.id }));
+      const isUnmonitoringSingles = isCommandExecuting(findCommand(commands, { name: commandNames.UNMONITOR_SINGLES, artistId: artist.id }));
       const isArtistRefreshing = isCommandExecuting(findCommand(commands, { name: commandNames.REFRESH_ARTIST, artistId: artist.id }));
       const artistRefreshingCommand = findCommand(commands, { name: commandNames.REFRESH_ARTIST });
       const allArtistRefreshing = (
@@ -137,6 +138,7 @@ function createMapStateToProps() {
         isRenamingFiles,
         isRenamingArtist,
         isRebuildingArtist,
+        isUnmonitoringSingles,
         isFetching,
         isPopulated,
         albumsError,
@@ -252,6 +254,13 @@ class ArtistDetailsConnector extends Component {
     });
   };
 
+  onUnmonitorSinglesPress = () => {
+    this.props.executeCommand({
+      name: commandNames.UNMONITOR_SINGLES,
+      artistId: this.props.id
+    });
+  };
+
   //
   // Render
 
@@ -263,6 +272,7 @@ class ArtistDetailsConnector extends Component {
         onRefreshPress={this.onRefreshPress}
         onSearchPress={this.onSearchPress}
         onRebuildDatabasePress={this.onRebuildDatabasePress}
+        onUnmonitorSinglesPress={this.onUnmonitorSinglesPress}
       />
     );
   }
@@ -277,6 +287,7 @@ ArtistDetailsConnector.propTypes = {
   isRenamingFiles: PropTypes.bool.isRequired,
   isRenamingArtist: PropTypes.bool.isRequired,
   isRebuildingArtist: PropTypes.bool.isRequired,
+  isUnmonitoringSingles: PropTypes.bool.isRequired,
   fetchAlbums: PropTypes.func.isRequired,
   clearAlbums: PropTypes.func.isRequired,
   fetchTrackFiles: PropTypes.func.isRequired,

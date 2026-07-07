@@ -197,6 +197,18 @@ namespace Lidarr.Api.V1.Artist
             _artistService.DeleteArtist(id, deleteFiles, addImportListExclusion);
         }
 
+        /// <summary>
+        /// Finds all monitored singles for this artist whose tracks (matched by
+        /// MusicBrainz ForeignRecordingId) are already present in at least one
+        /// full album, and unmonitors them.
+        /// </summary>
+        [HttpPost("{id}/unmonitorsingles")]
+        public IActionResult UnmonitorSingles(int id)
+        {
+            _commandQueueManager.Push(new NzbDrone.Core.Music.Commands.UnmonitorSinglesCommand(id), trigger: CommandTrigger.Manual);
+            return Accepted();
+        }
+
         private void MapCoversToLocal(params ArtistResource[] artists)
         {
             foreach (var artistResource in artists)

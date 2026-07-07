@@ -1333,6 +1333,8 @@
   "Unmonitored": "Unmonitored",
   "UnmonitoredHelpText": "Include unmonitored albums in the iCal feed",
   "UnmonitoredOnly": "Unmonitored Only",
+  "UnmonitorSingles": "Unmonitor Singles",
+  "UnmonitorSinglesHint": "Unmonitor singles whose tracks are already present in a full album",
   "UpdateAll": "Update All",
   "UpdateAppDirectlyLoadError": "Unable to update {appName} directly,",
   "UpdateAutomaticallyHelpText": "Automatically download and install updates. You will still be able to install from System: Updates",

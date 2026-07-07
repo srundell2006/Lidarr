@@ -25,4 +25,5 @@ export const SEASON_SEARCH = 'AlbumSearch';
 export const ARTIST_SEARCH = 'ArtistSearch';
 export const REBUILD_ARTIST = 'RebuildArtist';
 export const SCAN_ALBUM = 'ScanAlbum';
+export const UNMONITOR_SINGLES = 'UnmonitorSingles';
 export const UNINSTALL_PLUGIN = 'UninstallPlugin';
