@@ -10,20 +10,21 @@ services:
       - PGID=1000
       - TZ=America/Chicago
     volumes:
-      - LidarrConfig:/config
-      - PlexMedia:/data
-      - PlexMedia2:/data2
+      - /PlexMedia/LidarrForkConfig:/config
+      - /PlexMedia:/data
+      - /PlexMedia2:/data2
     ports:
       - "8687:80"
-#    networks:
-#      traefik:
-#        ipv4_address: 172.30.0.19
+    networks:
+      traefik:
+        ipv4_address: 172.30.0.19
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.lidarr-fork.rule=Host(`music-fork.gaytulsa.org`)"
-      - "traefik.http.services.lidarr-fork.loadbalancer.server.port=8686"
+      - "traefik.http.routers.lidarr-fork.rule=Host(`music.gaytulsa.org`)"
+      - "traefik.http.services.lidarr-fork.loadbalancer.server.port=80"
       - "traefik.http.routers.lidarr-fork.service=lidarr-fork"
+      - "traefik.http.routers.lidarr-fork.middlewares=authentik-auth"
 
 networks:
   traefik:
