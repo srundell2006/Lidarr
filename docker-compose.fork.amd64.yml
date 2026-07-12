@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.amd64
+      no_cache: true
     container_name: lidarr-fork
     hostname: music-fork.gaytulsa.org
     environment:
