@@ -234,33 +234,38 @@ namespace NzbDrone.Core.MediaFiles.TrackImport
 
                     if (!localTrack.ExistingFile)
                     {
-                        // Quality-aware replacement: only import if the new file is
-                        // strictly better quality than the existing library file.
-                        // Equal-quality files are treated as "already in library" and
-                        // skipped — the source will be cleaned up by DeleteRejectedFiles.
+                        // Quality-aware replacement: only skip import if the existing library
+                        // file is STRICTLY better quality. Equal-quality files are still
+                        // imported so they can be renamed/retagged by UpgradeTrackFile.
                         var newWeight = Quality.DefaultQualityDefinitions
                             .FirstOrDefault(q => q.Quality == localTrack.Quality.Quality)?.Weight ?? 0;
 
-                        var blockedByEqualOrHigherQuality = localTrack.Tracks
+                        var tracksWithExistingFiles = localTrack.Tracks
                             .Where(t => t.TrackFileId > 0)
                             .Select(t => t.TrackFile.Value)
                             .Where(f => f != null)
-                            .Any(f =>
-                            {
-                                var existingWeight = Quality.DefaultQualityDefinitions
-                                    .FirstOrDefault(q => q.Quality == f.Quality.Quality)?.Weight ?? 0;
-                                return existingWeight >= newWeight;
-                            });
+                            .ToList();
 
-                        if (blockedByEqualOrHigherQuality)
+                        _logger.Warn($"Quality check: '{localTrack.Path}' newWeight={newWeight}, tracksWithExistingFiles={tracksWithExistingFiles.Count}");
+
+                        var blockedByStrictlyHigherQuality = tracksWithExistingFiles.Any(f =>
                         {
-                            _logger.Debug("Skipping import of '{0}' — existing track file has equal or higher quality", localTrack.Path);
-                            importResults.Add(new ImportResult(importDecision, "Existing file has equal or higher quality, skipping replacement"));
+                            var existingWeight = Quality.DefaultQualityDefinitions
+                                .FirstOrDefault(q => q.Quality == f.Quality.Quality)?.Weight ?? 0;
+                            _logger.Warn($"  existing file '{f.Path}' existingWeight={existingWeight} vs newWeight={newWeight}");
+                            return existingWeight > newWeight;
+                        });
+
+                        if (blockedByStrictlyHigherQuality)
+                        {
+                            _logger.Warn("Skipping import of '{0}' — existing track file has strictly higher quality", localTrack.Path);
+                            importResults.Add(new ImportResult(importDecision, "Existing file has strictly higher quality, skipping replacement"));
                             continue;
                         }
 
                         trackFile.SceneName = localTrack.SceneName;
                         trackFile.OriginalFilePath = GetOriginalFilePath(downloadClientItem, localTrack);
+                        _logger.Warn($"Attempting file move: '{localTrack.Path}' → library (copyOnly={copyOnly})");
 
                         var moveResult = _trackFileUpgrader.UpgradeTrackFile(trackFile, localTrack, copyOnly);
                         oldFiles = moveResult.OldFiles;
@@ -321,7 +326,7 @@ namespace NzbDrone.Core.MediaFiles.TrackImport
                     {
                         if (_diskProvider.FileExists(localTrack.Path))
                         {
-                            _logger.Debug("Deleting duplicate import file '{0}' — destination already exists in library.", localTrack.Path);
+                            _logger.Warn("Deleting duplicate import file '{0}' — destination already exists in library.", localTrack.Path);
                             _diskProvider.DeleteFile(localTrack.Path);
                         }
                     }
