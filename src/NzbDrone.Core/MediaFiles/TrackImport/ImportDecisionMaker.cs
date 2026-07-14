@@ -264,7 +264,7 @@ namespace NzbDrone.Core.MediaFiles.TrackImport
             }
             else if (decision.Rejections.Any())
             {
-                _logger.Debug("Album rejected for the following reasons: {0}", string.Join(", ", decision.Rejections));
+                _logger.Warn("Album rejected for the following reasons: {0}", string.Join(", ", decision.Rejections));
             }
             else
             {
@@ -297,7 +297,7 @@ namespace NzbDrone.Core.MediaFiles.TrackImport
             }
             else if (decision.Rejections.Any())
             {
-                _logger.Debug("File rejected for the following reasons: {0}", string.Join(", ", decision.Rejections));
+                _logger.Warn("File rejected for the following reasons: {0}", string.Join(", ", decision.Rejections));
             }
             else
             {
