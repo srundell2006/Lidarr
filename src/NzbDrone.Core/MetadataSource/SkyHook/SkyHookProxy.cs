@@ -595,11 +595,45 @@ namespace NzbDrone.Core.MetadataSource.SkyHook
             return track;
         }
 
+        // Returns true if the majority of letter characters in the name are outside the
+        // Latin script blocks (Basic Latin through Latin Extended-B, U+0000–U+024F).
+        // Used to detect names written in CJK, Hangul, Arabic, Cyrillic, etc.
+        private static bool IsNonLatinScript(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return false;
+            var letters = name.Where(char.IsLetter).ToList();
+            if (letters.Count == 0) return false;
+            var nonLatinCount = letters.Count(c => c > 'ɏ');
+            return nonLatinCount > letters.Count / 2;
+        }
+
+        // If the primary artist name is non-Latin, prefer the first alias that is
+        // predominantly Latin-script (e.g. an English transliteration).
+        // Falls back to the original name when no Latin alias is found.
+        private static string PreferEnglishName(string primaryName, List<string> aliases)
+        {
+            if (!IsNonLatinScript(primaryName) || aliases == null || aliases.Count == 0)
+                return primaryName;
+
+            var latinAlias = aliases.FirstOrDefault(a =>
+            {
+                if (string.IsNullOrWhiteSpace(a)) return false;
+                var letters = a.Where(char.IsLetter).ToList();
+                if (letters.Count == 0) return false;
+                var latinCount = letters.Count(c => c <= 'ɏ');
+                return latinCount > letters.Count / 2;
+            });
+
+            return latinAlias ?? primaryName;
+        }
+
         private static ArtistMetadata MapArtistMetadata(ArtistResource resource)
         {
             var artist = new ArtistMetadata();
 
-            artist.Name = resource.ArtistName;
+            // Prefer a Latin-script (English) name when the primary name uses a non-Latin
+            // script. The original name is preserved in Aliases so it isn't lost.
+            artist.Name = PreferEnglishName(resource.ArtistName, resource.ArtistAliases);
             artist.Aliases = resource.ArtistAliases;
             artist.ForeignArtistId = resource.Id;
             artist.OldForeignArtistIds = resource.OldIds;
