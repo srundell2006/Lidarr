@@ -17,6 +17,7 @@ using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Music;
 using NzbDrone.Core.Music.Commands;
+using NzbDrone.Core.Parser;
 using NzbDrone.Core.Music.Events;
 using NzbDrone.Core.RootFolders;
 using NzbDrone.Core.Validation;
@@ -45,6 +46,7 @@ namespace Lidarr.Api.V1.Artist
         private readonly IMapCoversToLocal _coverMapper;
         private readonly IManageCommandQueue _commandQueueManager;
         private readonly IRootFolderService _rootFolderService;
+        private readonly IArtistMetadataRepository _artistMetadataRepository;
 
         public ArtistController(IBroadcastSignalRMessage signalRBroadcaster,
                             IArtistService artistService,
@@ -54,6 +56,7 @@ namespace Lidarr.Api.V1.Artist
                             IMapCoversToLocal coverMapper,
                             IManageCommandQueue commandQueueManager,
                             IRootFolderService rootFolderService,
+                            IArtistMetadataRepository artistMetadataRepository,
                             RecycleBinValidator recycleBinValidator,
                             RootFolderValidator rootFolderValidator,
                             MappedNetworkDriveValidator mappedNetworkDriveValidator,
@@ -75,6 +78,7 @@ namespace Lidarr.Api.V1.Artist
             _coverMapper = coverMapper;
             _commandQueueManager = commandQueueManager;
             _rootFolderService = rootFolderService;
+            _artistMetadataRepository = artistMetadataRepository;
 
             Http.Validation.RuleBuilderExtensions.ValidId(SharedValidator.RuleFor(s => s.QualityProfileId));
             Http.Validation.RuleBuilderExtensions.ValidId(SharedValidator.RuleFor(s => s.MetadataProfileId));
@@ -184,6 +188,19 @@ namespace Lidarr.Api.V1.Artist
 
             var model = artistResource.ToModel(artist);
 
+            // If the user selected a different display name, persist it to ArtistMetadata
+            // and update the derived CleanName/SortName fields on the artist.
+            if (artistResource.ArtistName.IsNotNullOrWhiteSpace() &&
+                artistResource.ArtistName != artist.Name)
+            {
+                var metadata = artist.Metadata.Value;
+                metadata.Name = artistResource.ArtistName;
+                _artistMetadataRepository.Update(metadata);
+
+                model.CleanName = artistResource.ArtistName.CleanArtistName();
+                model.SortName = Parser.NormalizeTitle(artistResource.ArtistName).ToLower();
+            }
+
             _artistService.UpdateArtist(model);
 
             BroadcastResourceChange(ModelAction.Updated, artistResource);
@@ -252,22 +269,6 @@ namespace Lidarr.Api.V1.Artist
             resource.Statistics = artistStatistics.ToResource();
         }
 
-        // private void PopulateAlternateTitles(List<ArtistResource> resources)
-        // {
-        //    foreach (var resource in resources)
-        //    {
-        //        PopulateAlternateTitles(resource);
-        //    }
-        // }
-
-        // private void PopulateAlternateTitles(ArtistResource resource)
-        // {
-        //    var mappings = _sceneMappingService.FindByTvdbId(resource.TvdbId);
-
-        // if (mappings == null) return;
-
-        // resource.AlternateTitles = mappings.Select(v => new AlternateTitleResource { Title = v.Title, SeasonNumber = v.SeasonNumber, SceneSeasonNumber = v.SceneSeasonNumber }).ToList();
-        // }
         private void LinkRootFolderPath(ArtistResource resource)
         {
             resource.RootFolderPath = _rootFolderService.GetBestRootFolderPath(resource.Path);

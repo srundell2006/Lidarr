@@ -43,10 +43,16 @@ function createMapStateToProps() {
         'qualityProfileId',
         'metadataProfileId',
         'path',
-        'tags'
+        'tags',
+        'artistName'
       ]);
 
       const settings = selectSettings(artistSettings, pendingChanges, saveError);
+
+      // Build the list of selectable names: current name + all aliases, deduplicated.
+      const aliases = artist.artistAliases || [];
+      const allNames = _.uniq([artist.artistName, ...aliases].filter(Boolean)).sort();
+      const nameOptions = allNames.map((name) => ({ key: name, value: name }));
 
       return {
         artistName: artist.artistName,
@@ -55,6 +61,7 @@ function createMapStateToProps() {
         isPathChanging,
         originalPath: artist.path,
         item: settings.settings,
+        nameOptions,
         showMetadataProfile: metadataProfiles.items.length > 1,
         ...settings
       };
@@ -111,6 +118,7 @@ EditArtistModalContentConnector.propTypes = {
   artistId: PropTypes.number,
   isSaving: PropTypes.bool.isRequired,
   saveError: PropTypes.object,
+  nameOptions: PropTypes.arrayOf(PropTypes.object),
   dispatchSetArtistValue: PropTypes.func.isRequired,
   dispatchSaveArtist: PropTypes.func.isRequired,
   onModalClose: PropTypes.func.isRequired

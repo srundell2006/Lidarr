@@ -55,6 +55,7 @@ namespace Lidarr.Api.V1.Artist
         public string RootFolderPath { get; set; }
         public string Folder { get; set; }
         public List<string> Genres { get; set; }
+        public List<string> ArtistAliases { get; set; }
         public string CleanName { get; set; }
         public string SortName { get; set; }
         public HashSet<int> Tags { get; set; }
@@ -105,6 +106,7 @@ namespace Lidarr.Api.V1.Artist
                 // Root folder path is now calculated from the artist path
                 // RootFolderPath = model.RootFolderPath,
                 Genres = model.Metadata.Value.Genres,
+                ArtistAliases = model.Metadata.Value.Aliases,
                 Tags = model.Tags,
                 Added = model.Added,
                 AddOptions = model.AddOptions,

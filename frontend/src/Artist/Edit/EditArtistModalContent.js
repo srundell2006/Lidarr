@@ -70,6 +70,7 @@ class EditArtistModalContent extends Component {
       isSaving,
       showMetadataProfile,
       originalPath,
+      nameOptions,
       onInputChange,
       onModalClose,
       onDeleteArtistPress,
@@ -77,6 +78,7 @@ class EditArtistModalContent extends Component {
     } = this.props;
 
     const {
+      artistName: artistNameSetting,
       monitored,
       monitorNewItems,
       qualityProfileId,
@@ -93,6 +95,25 @@ class EditArtistModalContent extends Component {
 
         <ModalBody>
           <Form {...otherProps}>
+            {
+              nameOptions && nameOptions.length > 1 ?
+                <FormGroup size={sizes.MEDIUM}>
+                  <FormLabel>
+                    Artist Name
+                  </FormLabel>
+
+                  <FormInputGroup
+                    type={inputTypes.SELECT}
+                    name="artistName"
+                    helpText="Choose which name to display for this artist. All names come from MusicBrainz."
+                    values={nameOptions}
+                    {...artistNameSetting}
+                    onChange={onInputChange}
+                  />
+                </FormGroup> :
+                null
+            }
+
             <FormGroup size={sizes.MEDIUM}>
               <FormLabel>
                 {translate('Monitored')}
@@ -250,6 +271,7 @@ EditArtistModalContent.propTypes = {
   showMetadataProfile: PropTypes.bool.isRequired,
   isPathChanging: PropTypes.bool.isRequired,
   originalPath: PropTypes.string.isRequired,
+  nameOptions: PropTypes.arrayOf(PropTypes.object),
   onInputChange: PropTypes.func.isRequired,
   onSavePress: PropTypes.func.isRequired,
   onModalClose: PropTypes.func.isRequired,
