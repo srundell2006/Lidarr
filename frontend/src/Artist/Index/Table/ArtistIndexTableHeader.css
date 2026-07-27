@@ -41,7 +41,8 @@
   flex: 0 0 180px;
 }
 
-.albumCount {
+.albumCount,
+.missingAlbumCount {
   composes: headerCell from '~Components/Table/VirtualTableHeaderCell.css';
 
   flex: 0 0 100px;

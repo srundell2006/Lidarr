@@ -73,6 +73,7 @@ function ArtistIndexRow(props: ArtistIndexRowProps) {
 
   const {
     albumCount = 0,
+    missingAlbumCount = 0,
     trackCount = 0,
     trackFileCount = 0,
     totalTrackCount = 0,
@@ -300,6 +301,14 @@ function ArtistIndexRow(props: ArtistIndexRowProps) {
               albumCount={albumCount}
               isSelectMode={isSelectMode}
             />
+          );
+        }
+
+        if (name === 'missingAlbumCount') {
+          return (
+            <VirtualTableRowCell key={name} className={styles[name]}>
+              {missingAlbumCount}
+            </VirtualTableRowCell>
           );
         }
 

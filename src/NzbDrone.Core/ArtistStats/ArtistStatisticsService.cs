@@ -27,11 +27,6 @@ namespace NzbDrone.Core.ArtistStats
         IHandle<AlbumUpdatedEvent>,
         IHandle<TrackFileDeletedEvent>
     {
-        // Minimum interval between full-library cache busts. Rapid events (e.g. bulk
-        // imports) fire AlbumImportedEvent for every track file, which previously caused
-        // a cold-cache heavy aggregation query on every subsequent page load. Throttling
-        // to once per 60 seconds means at most one expensive query per minute instead of
-        // one per imported file, with at most 60 seconds of stale statistics shown.
         private const int AllArtistsCacheThrottleSeconds = 60;
         private readonly object _allArtistsCacheLock = new object();
         private DateTime _allArtistsNextInvalidationTime = DateTime.MinValue;
@@ -46,11 +41,6 @@ namespace NzbDrone.Core.ArtistStats
             _cache = cacheManager.GetCache<List<AlbumStatistics>>(GetType());
         }
 
-        /// <summary>
-        /// Invalidates the full-library statistics cache, subject to a throttle so that
-        /// rapid bursts of events (e.g. bulk imports) only cause one cache bust per
-        /// <see cref="AllArtistsCacheThrottleSeconds"/> seconds.
-        /// </summary>
         private void InvalidateAllArtistsCache()
         {
             lock (_allArtistsCacheLock)
@@ -89,6 +79,7 @@ namespace NzbDrone.Core.ArtistStats
             {
                 AlbumStatistics = albumStatistics,
                 AlbumCount = albumStatistics.Count,
+                MissingAlbumCount = albumStatistics.Count(s => s.TrackCount > 0 && s.TrackFileCount < s.TrackCount),
                 ArtistId = albumStatistics.First().ArtistId,
                 TrackFileCount = albumStatistics.Sum(s => s.TrackFileCount),
                 TrackCount = albumStatistics.Sum(s => s.TrackCount),

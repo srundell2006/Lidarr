@@ -77,7 +77,8 @@
   flex: 0 0 180px;
 }
 
-.albumCount {
+.albumCount,
+.missingAlbumCount {
   composes: cell;
 
   flex: 0 0 100px;

@@ -5,6 +5,7 @@ namespace Lidarr.Api.V1.Artist
     public class ArtistStatisticsResource
     {
         public int AlbumCount { get; set; }
+        public int MissingAlbumCount { get; set; }
         public int TrackFileCount { get; set; }
         public int TrackCount { get; set; }
         public int TotalTrackCount { get; set; }
@@ -36,6 +37,7 @@ namespace Lidarr.Api.V1.Artist
             return new ArtistStatisticsResource
             {
                 AlbumCount = model.AlbumCount,
+                MissingAlbumCount = model.MissingAlbumCount,
                 TrackFileCount = model.TrackFileCount,
                 TrackCount = model.TrackCount,
                 TotalTrackCount = model.TotalTrackCount,

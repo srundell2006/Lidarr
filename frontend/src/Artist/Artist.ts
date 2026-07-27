@@ -9,6 +9,7 @@ export interface Image {
 
 export interface Statistics {
   albumCount: number;
+  missingAlbumCount: number;
   trackCount: number;
   trackFileCount: number;
   percentOfTracks: number;

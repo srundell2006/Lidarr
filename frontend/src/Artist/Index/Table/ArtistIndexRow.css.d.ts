@@ -14,6 +14,7 @@ interface CssExports {
   'lastAlbum': string;
   'link': string;
   'metadataProfileId': string;
+  'missingAlbumCount': string;
   'monitorNewItems': string;
   'nextAlbum': string;
   'overlayTitle': string;

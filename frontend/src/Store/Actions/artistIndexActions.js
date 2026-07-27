@@ -125,6 +125,13 @@ export const defaultState = {
       isVisible: true
     },
     {
+      name: 'missingAlbumCount',
+      label: 'M/I Albums',
+      columnLabel: 'Missing or Incomplete Albums',
+      isSortable: true,
+      isVisible: false
+    },
+    {
       name: 'trackProgress',
       label: () => translate('Tracks'),
       isSortable: true,
@@ -176,6 +183,11 @@ export const defaultState = {
 
   sortPredicates: {
     ...sortPredicates,
+
+    missingAlbumCount: function(item) {
+      const { statistics = {} } = item;
+      return statistics.missingAlbumCount ?? 0;
+    },
 
     trackProgress: function(item) {
       const { statistics = {} } = item;
